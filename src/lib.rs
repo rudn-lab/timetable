@@ -1,4 +1,5 @@
-use serde_json::json;
+use std::collections::HashMap;
+
 use worker::*;
 
 mod utils;
@@ -29,27 +30,36 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
     // functionality and a `RouteContext` which you can use to  and get route parameters and
     // Environment bindings like KV Stores, Durable Objects, Secrets, and Variables.
     router
-        .get("/", |_, _| Response::ok("Hello from Workers!"))
-        .post_async("/form/:field", |mut req, ctx| async move {
-            if let Some(name) = ctx.param("field") {
-                let form = req.form_data().await?;
-                match form.get(name) {
-                    Some(FormEntry::Field(value)) => {
-                        return Response::from_json(&json!({ name: value }))
-                    }
-                    Some(FormEntry::File(_)) => {
-                        return Response::error("`field` param in form shouldn't be a File", 422);
-                    }
-                    None => return Response::error("Bad Request", 400),
-                }
-            }
-
-            Response::error("Bad Request", 400)
-        })
-        .get("/worker-version", |_, ctx| {
-            let version = ctx.var("WORKERS_RS_VERSION")?.to_string();
-            Response::ok(version)
-        })
+        .get_async("/", handle_root)
+        .post_async("/update", handle_update)
+        .get("/worker-version", handle_version)
         .run(req, env)
         .await
+}
+
+pub async fn handle_root<D>(_: Request, ctx: RouteContext<D>) -> Result<Response> {
+    if let Ok(kv) = ctx.kv("TIMETABLE_KV") {
+        if let Ok(Some(msg)) = kv.get("message").text().await {
+            return Response::ok(msg);
+        }
+    }
+
+    Response::ok("Hello from Workers!")
+}
+
+pub async fn handle_update<D>(mut req: Request, ctx: RouteContext<D>) -> Result<Response> {
+    let data: HashMap<String, String> = req.json().await?;
+    if let Some(msg) = data.get("message") {
+        // return Response::ok(msg);
+        let kv = ctx.kv("TIMETABLE_KV")?;
+        kv.put("message", msg)?.execute().await?;
+        return Response::empty();
+    }
+
+    Response::error("Bad Request", 400)
+}
+
+pub fn handle_version<D>(_: Request, ctx: RouteContext<D>) -> Result<Response> {
+    let version = ctx.var("WORKERS_RS_VERSION")?.to_string();
+    Response::ok(version)
 }
