@@ -5,9 +5,9 @@ import discord
 from discord.ext import commands
 from discord import Interaction
 from typing import Literal, Optional
-from discord.ext.commands import Greedy, Context  # or a subclass of yours
+from discord.ext.commands import Greedy, Context
 
-import requests
+from timetable import Timetable
 
 import logging
 
@@ -24,18 +24,8 @@ async def on_ready():
 
 
 @bot.tree.command()
-async def capitalize(interaction: Interaction, msg: str):
-    await interaction.response.send_message(msg.upper())
-
-
-@bot.tree.command()
-async def post(interaction: Interaction, data: str):
-    payload = {"message": data}
-    headers = {"Content-Type": "application/json"}
-    url = "https://timetable.rudn-lab.ru/update"
-    requests.post(url, json=payload, headers=headers)
-    logging.info(f"Posted {payload} to {url}")
-    await interaction.response.send_message("Done!")
+async def timetable(interaction: Interaction):
+    await interaction.response.send_modal(Timetable())
 
 
 @bot.command()
@@ -58,7 +48,6 @@ async def sync(
             synced = []
         else:
             synced = await ctx.bot.tree.sync()
-
         msg = f"Synced {len(synced)} commands {'globally' if spec is None else 'to the current guild.'}"
         logging.info(msg)
         await ctx.send(msg)
