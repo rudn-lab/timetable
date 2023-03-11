@@ -3,6 +3,7 @@ from discord import ui
 import logging
 import re
 import httpx
+from datetime import time
 
 
 class Timetable(ui.Modal, title="New opening and closing times of the RUDN Lab"):
@@ -41,7 +42,8 @@ class Timetable(ui.Modal, title="New opening and closing times of the RUDN Lab")
                 errors = True
             else:
                 split = text.split(" - ")
-                payload[day] = (split[0], split[1])
+                # Note: sending time with seconds, so that the CF worker easily understands it
+                payload[day] = (f"{split[0]}:00", f"{split[1]}:00")
 
                 review += f"{day}: from {split[0]} until {split[1]}\n"
                 logging.info(f'TextInput {day}: "{text}"')
@@ -51,7 +53,7 @@ class Timetable(ui.Modal, title="New opening and closing times of the RUDN Lab")
                 f"Some of the input fields were incorrectly formatted.\nPlease try again.\n{review}",
                 ephemeral=True,
             )
-        else:
+        elif payload:
 
             button = ui.Button(label="Confirm")
             view = ui.View()
@@ -77,4 +79,8 @@ class Timetable(ui.Modal, title="New opening and closing times of the RUDN Lab")
 
             await interaction.response.send_message(
                 f"This will be the new timetable.\n{review}", view=view
+            )
+        else:
+            await interaction.response.send_message(
+                "No input. Nothing to update.", ephemeral=True
             )
