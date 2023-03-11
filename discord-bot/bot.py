@@ -1,39 +1,92 @@
-import discord
+import asyncio
 import os
+
+import discord
+from discord.ext import commands
+from discord import Interaction
+from typing import Literal, Optional
+from discord.ext.commands import Greedy, Context  # or a subclass of yours
+
 import requests
 
 import logging
+
 discord.utils.setup_logging()
 
 intents = discord.Intents.default()
 intents.message_content = True
+bot = commands.Bot(command_prefix="!", intents=intents)
 
-client = discord.Client(intents=intents)
 
-@client.event
+@bot.event
 async def on_ready():
-    logging.info(f"We have logged in as {client.user}")
+    logging.info(f"Logged in as {bot.user}")
 
-@client.event
-async def on_message(message):
-    if message.author == client.user:
+
+@bot.tree.command()
+async def capitalize(interaction: Interaction, msg: str):
+    await interaction.response.send_message(msg.upper())
+
+
+@bot.tree.command()
+async def post(interaction: Interaction, data: str):
+    payload = {"message": data}
+    headers = {"Content-Type": "application/json"}
+    url = "https://timetable.rudn-lab.ru/update"
+    requests.post(url, json=payload, headers=headers)
+    logging.info(f"Posted {payload} to {url}")
+    await interaction.response.send_message("Done!")
+
+
+@bot.command()
+@commands.guild_only()
+@commands.is_owner()
+async def sync(
+    ctx: Context,
+    guilds: Greedy[discord.Object],
+    spec: Optional[Literal["~", "*", "^"]] = None,
+) -> None:
+    if not guilds:
+        if spec == "~":
+            synced = await ctx.bot.tree.sync(guild=ctx.guild)
+        elif spec == "*":
+            ctx.bot.tree.copy_global_to(guild=ctx.guild)
+            synced = await ctx.bot.tree.sync(guild=ctx.guild)
+        elif spec == "^":
+            ctx.bot.tree.clear_commands(guild=ctx.guild)
+            await ctx.bot.tree.sync(guild=ctx.guild)
+            synced = []
+        else:
+            synced = await ctx.bot.tree.sync()
+
+        msg = f"Synced {len(synced)} commands {'globally' if spec is None else 'to the current guild.'}"
+        logging.info(msg)
+        await ctx.send(msg)
         return
 
-    logging.info(f"Message from {message.author}: {message.content}")
-    if message.content.startswith("$hello"):
-        await message.channel.send("Hello!")
-    elif message.content.startswith("$echo"):
-        rest = message.content.strip("$echo ")
-        await message.channel.send(rest)
-    elif message.content.startswith("$post"):
-        rest = message.content.stip("$post ")
-        payload = {"msg": rest}
-        headers = {
-            "Content-Type": "application/json"
-        }
-        requests.post("https://timetable.rudn-lab.ru/update", json=payload, headers=headers)
+    ret = 0
+    for guild in guilds:
+        try:
+            await ctx.bot.tree.sync(guild=guild)
+        except discord.HTTPException:
+            pass
+        else:
+            ret += 1
+    msg = f"Synced the tree to {ret}/{len(guilds)}."
+    logging.info(msg)
+    await ctx.send(msg)
 
 
-TOKEN = os.getenv("BOT_TOKEN")
-if TOKEN:
-    client.run(TOKEN)
+async def main():
+    async with bot:
+        # do you setup stuff if you need it here, then:
+        bot.tree.copy_global_to(
+            guild=discord.Object(id=1074973362268426290)
+        )  # we copy the global commands we have to a guild, this is optional
+        TOKEN = os.getenv("BOT_TOKEN")
+        if TOKEN:
+            await bot.start(TOKEN)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
