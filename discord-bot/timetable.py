@@ -2,7 +2,7 @@ import discord
 from discord import ui
 import logging
 import re
-import requests
+import httpx
 
 
 class Timetable(ui.Modal, title="New opening and closing times of the RUDN Lab"):
@@ -53,16 +53,28 @@ class Timetable(ui.Modal, title="New opening and closing times of the RUDN Lab")
             )
         else:
 
+            button = ui.Button(label="Confirm")
+            view = ui.View()
+            view.add_item(button)
+
             async def post_new_timetable_info(interaction: discord.Interaction):
                 headers = {"Content-Type": "application/json"}
                 url = "https://timetable.rudn-lab.ru/update"
-                requests.post(url, json=payload, headers=headers)
-                logging.info(f"Posted {payload} to {url}")
+                async with httpx.AsyncClient() as client:
+                    r = await client.post(url, headers=headers, json=payload)
+                    if r.status_code == 200:
+                        logging.info(f"Succesfully posted {payload} to {url}")
+                    else:
+                        logging.warn(f"Could not post {payload} to {url}")
 
-            button = ui.Button(label="Update")
+                button.disabled = True
+                button.label = "Confirmed"
+                await interaction.response.edit_message(
+                    content=f"This is the new timetable.\n{review}", view=view
+                )
+
             button.callback = post_new_timetable_info
-            view = ui.View()
-            view.add_item(button)
+
             await interaction.response.send_message(
                 f"This will be the new timetable.\n{review}", view=view
             )
