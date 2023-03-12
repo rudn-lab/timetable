@@ -4,6 +4,7 @@ import logging
 import re
 import httpx
 from datetime import time
+import typing
 
 
 class Timetable(ui.Modal, title="New opening and closing times of the RUDN Lab"):
@@ -83,10 +84,6 @@ class Timetable(ui.Modal, title="New opening and closing times of the RUDN Lab")
             )
         elif payload:
 
-            button = ui.Button(label="Confirm")
-            view = ui.View()
-            view.add_item(button)
-
             async def post_new_timetable_info(interaction: discord.Interaction):
                 headers = {"Content-Type": "application/json"}
                 url = "https://timetable.rudn-lab.ru/update"
@@ -97,18 +94,44 @@ class Timetable(ui.Modal, title="New opening and closing times of the RUDN Lab")
                     else:
                         logging.warn(f"Could not post {payload} to {url}")
 
-                button.disabled = True
-                button.label = "Confirmed"
+                button_view = ConfirmButtonView(label="Confirmed", disabled=True)
                 await interaction.response.edit_message(
-                    content=f"This is the new timetable.\n{review}", view=view
+                    content=f"This is the new timetable.\n{review}", view=button_view
                 )
 
-            button.callback = post_new_timetable_info
+            button_view = ConfirmButtonView(label="Confirm", disabled=False)
+            button_view.set_callback(post_new_timetable_info)
 
             await interaction.response.send_message(
-                f"This will be the new timetable.\n{review}", view=view
+                f"This will be the new timetable.\n{review}", view=button_view
             )
         else:
             await interaction.response.send_message(
                 "No input. Nothing to update.", ephemeral=True
             )
+
+
+class ConfirmButtonView(ui.View):
+    def __init__(self, label: str, disabled: bool = False):
+        super().__init__()
+        button = ui.Button(label=label, disabled=disabled)
+        self.add_item(button)
+
+    def set_callback(self, callback):
+        self.children[0].callback = callback
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        member = typing.cast(discord.Member, interaction.user)
+        for role in member.roles:
+            if "Lab Admin" == role.name:
+                logging.info(f"New timetable confirmed by {member.name}")
+                return True
+
+        await interaction.response.send_message(
+            content="You do not have permissions to update the timetable.",
+            ephemeral=True,
+        )
+        logging.info(
+            f"Member {member.name} tried to confirm new timetable without sufficient permissions."
+        )
+        return False
