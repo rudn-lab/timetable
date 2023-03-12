@@ -27,8 +27,19 @@ class Timetable(ui.Modal, title="New opening and closing times of the RUDN Lab")
             self.add_item(day_input)
         logging.info("New timetable request")
 
+    def is_timeperiod_valid(self, from_time: time, until_time: time) -> bool:
+        hour_delta = until_time.hour - from_time.hour
+        if hour_delta > 0:
+            return True
+        elif hour_delta == 0:
+            minute_delta = until_time.minute - from_time.minute
+            if minute_delta > 0:
+                return True
+
+        return False
+
     async def on_submit(self, interaction: discord.Interaction):
-        review = ""
+        review = "```\n"
         payload = dict()
         errors = False
         for (text_input, day) in zip(self.children, self.days):
@@ -36,21 +47,38 @@ class Timetable(ui.Modal, title="New opening and closing times of the RUDN Lab")
             if not text:
                 continue
 
-            if not self.time_regex.fullmatch(text):
-                review += f"{day}: FORMAT ERROR ({text})\n"
-                logging.warn(f'TextInput {day} is of incorrect format: "{text}"')
-                errors = True
-            else:
+            if self.time_regex.fullmatch(text):
                 split = text.split(" - ")
-                # Note: sending time with seconds, so that the CF worker easily understands it
-                payload[day] = (f"{split[0]}:00", f"{split[1]}:00")
+                from_time = time.fromisoformat(split[0])
+                until_time = time.fromisoformat(split[1])
 
-                review += f"{day}: from {split[0]} until {split[1]}\n"
-                logging.info(f'TextInput {day}: "{text}"')
+                if self.is_timeperiod_valid(from_time, until_time):
+                    # Note: sending with seconds, so that CF worker easily parses update request
+                    payload[day] = (
+                        from_time.isoformat(),
+                        until_time.isoformat(),
+                    )
+
+                    msg = f"{day}: {text}"
+                    review += msg + "\n"
+                    logging.info(msg)
+                else:
+                    msg = f"{day}: INVALID TIME PERIOD ({text})"
+                    review += msg + "\n"
+                    logging.warn(msg)
+                    errors = True
+
+            else:
+                msg = f"{day}: POOR FORMATTING ({text})"
+                review += msg + "\n"
+                logging.warn(msg)
+                errors = True
+
+        review += "```"
 
         if errors:
             await interaction.response.send_message(
-                f"Some of the input fields were incorrectly formatted.\nPlease try again.\n{review}",
+                f"Some of the input fields contain errors.\nPlease try again.\n{review}",
                 ephemeral=True,
             )
         elif payload:
