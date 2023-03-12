@@ -1,6 +1,11 @@
+use chrono::NaiveTime;
 use std::collections::HashMap;
 
+use serde_json;
 use worker::*;
+
+mod data;
+use data::*;
 
 mod utils;
 
@@ -17,18 +22,9 @@ fn log_request(req: &Request) {
 #[event(fetch)]
 pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Response> {
     log_request(&req);
-
-    // Optionally, get more helpful error messages written to the console in the case of a panic.
     utils::set_panic_hook();
 
-    // Optionally, use the Router to handle matching endpoints, use ":name" placeholders, or "*name"
-    // catch-alls to match on specific patterns. Alternatively, use `Router::with_data(D)` to
-    // provide arbitrary data that will be accessible in each route via the `ctx.data()` method.
     let router = Router::new();
-
-    // Add as many routes as your Worker needs! Each route will get a `Request` for handling HTTP
-    // functionality and a `RouteContext` which you can use to  and get route parameters and
-    // Environment bindings like KV Stores, Durable Objects, Secrets, and Variables.
     router
         .get_async("/", handle_root)
         .post_async("/update", handle_update)
@@ -48,15 +44,15 @@ pub async fn handle_root<D>(_: Request, ctx: RouteContext<D>) -> Result<Response
 }
 
 pub async fn handle_update<D>(mut req: Request, ctx: RouteContext<D>) -> Result<Response> {
-    let data: HashMap<String, String> = req.json().await?;
-    if let Some(msg) = data.get("message") {
-        // return Response::ok(msg);
-        let kv = ctx.kv("TIMETABLE_KV")?;
-        kv.put("message", msg)?.execute().await?;
-        return Response::empty();
+    let kv = ctx.kv("TIMETABLE_KV")?;
+    let data: HashMap<Day, [NaiveTime; 2]> = req.json().await?;
+    for (day, time) in data {
+        kv.put(&serde_json::to_string(&day)?, serde_json::to_string(&time)?)?
+            .execute()
+            .await?;
     }
 
-    Response::error("Bad Request", 400)
+    return Response::ok("Received new timetable");
 }
 
 pub fn handle_version<D>(_: Request, ctx: RouteContext<D>) -> Result<Response> {
