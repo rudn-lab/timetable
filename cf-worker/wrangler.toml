@@ -1,12 +1,22 @@
 name = "rudn-lab-timetable"
 main = "build/worker/shim.mjs"
 compatibility_date = "2022-01-20"
+
 kv_namespaces = [
   { binding = "TIMETABLE_KV", id = "8d3159a47ff5402cb6a86028c771deca", preview_id = "863507f3e7914f20a876905edf630449" }
 ]
+
 
 [vars]
 WORKERS_RS_VERSION = "0.0.11"
 
 [build]
 command = "cargo install -q worker-build && worker-build --release"
+
+[[rules]]
+type = "Text"
+globs = [ "**/*.html" ]
+fallthrough = true
+
+[site]
+bucket = "./public"
