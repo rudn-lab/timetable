@@ -3,7 +3,6 @@ use worker::*;
 mod asset;
 mod data;
 mod handlers;
-mod templates;
 mod utils;
 
 fn log_request(req: &Request) {
