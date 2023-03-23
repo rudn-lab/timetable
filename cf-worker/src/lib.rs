@@ -1,8 +1,11 @@
+use std::collections::HashMap;
+
+use chrono::NaiveTime;
+use data::Day;
 use worker::*;
 
 mod asset;
 mod data;
-mod handlers;
 mod utils;
 
 fn log_request(req: &Request) {
@@ -22,10 +25,24 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
 
     let router = Router::new();
     router
-        .get_async("/", handlers::handle_root)
-        // .get_async("/", |_, context| asset::serve(context))
-        .post_async("/update", handlers::handle_update)
-        .get("/worker-version", handlers::handle_version)
+        .get_async("/", |_, ctx| asset::serve_asset(ctx))
+        .get_async("/:asset", |_, ctx| asset::serve_asset(ctx))
+        .post_async("/update", handle_update)
+        .get("/worker-version", |_, ctx| {
+            Response::ok(ctx.var("WORKERS_RS_VERSION")?.to_string())
+        })
         .run(req, env)
         .await
+}
+
+pub async fn handle_update<D>(mut req: Request, ctx: RouteContext<D>) -> Result<Response> {
+    let kv = ctx.kv("TIMETABLE_KV")?;
+    let data: HashMap<Day, [NaiveTime; 2]> = req.json().await?;
+    for (day, time) in data {
+        kv.put(&serde_json::to_string(&day)?, serde_json::to_string(&time)?)?
+            .execute()
+            .await?;
+    }
+
+    Response::ok("Received new timetable")
 }
