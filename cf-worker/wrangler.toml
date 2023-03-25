@@ -3,9 +3,9 @@ main = "build/worker/shim.mjs"
 compatibility_date = "2022-01-20"
 
 kv_namespaces = [
-  { binding = "TIMETABLE_KV", id = "8d3159a47ff5402cb6a86028c771deca", preview_id = "863507f3e7914f20a876905edf630449" }
+  { binding = "TIMETABLE_KV", id = "8d3159a47ff5402cb6a86028c771deca", preview_id = "863507f3e7914f20a876905edf630449" },
+  { binding = "RUDN_FACULTIES", id = "11f772530add4d519a5b32214aa094a1", preview_id = "05e5057758194229b54b69d03c9f5e24" }
 ]
-
 
 [vars]
 WORKERS_RS_VERSION = "0.0.13"
@@ -19,4 +19,7 @@ globs = [ "**/*.html" ]
 fallthrough = true
 
 [site]
-bucket = "./public"
+bucket = "./static"
+
+[triggers]
+crons = ["0 0 * * mon","0 0 1 * *","* * * * *"]

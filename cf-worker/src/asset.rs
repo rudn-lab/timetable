@@ -41,7 +41,7 @@ async fn get_asset_data(store: &worker::kv::KvStore, asset_name: &str) -> Option
         for key in keys {
             let (f_name, f_ext) = match &key.name.split('.').collect::<Vec<_>>()[..] {
                 &[a, .., b] => (a, b),
-                _ => todo!("should be impossible"),
+                _ => unreachable!("Static files should have a file extension"),
             };
 
             if f_name == name && f_ext == ext {
