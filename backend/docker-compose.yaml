@@ -1,0 +1,13 @@
+services:
+  backend:
+    build: .
+    ports:
+      - "80:80"
+    restart: unless-stopped
+    volumes:
+      - .:/app
+      - registry:/root/.cargo/registry
+
+volumes:
+  registry:
+    driver: local
