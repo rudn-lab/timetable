@@ -13,13 +13,8 @@ WORKERS_RS_VERSION = "0.0.13"
 [build]
 command = "cargo install -q worker-build && worker-build --release"
 
-[[rules]]
-type = "Text"
-globs = [ "**/*.html" ]
-fallthrough = true
-
 [site]
 bucket = "./static"
 
 [triggers]
-crons = ["0 0 * * mon","0 0 1 * *","* * * * *"]
+crons = ["0 0 * * mon","0 0 1 * *"]

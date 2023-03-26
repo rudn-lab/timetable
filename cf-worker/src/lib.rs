@@ -18,6 +18,7 @@ fn log_request(req: &Request) {
     );
 }
 
+#[event(fetch)]
 pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Response> {
     log_request(&req);
     utils::set_panic_hook();
@@ -56,6 +57,7 @@ async fn handle_update<D>(mut req: Request, ctx: RouteContext<D>) -> Result<Resp
     Response::ok("Received new timetable")
 }
 
+#[event(scheduled)]
 pub async fn cron(event: ScheduledEvent, env: Env, _: ScheduleContext) {
     let cron = event.cron();
     let res = match cron.as_str() {
