@@ -1,0 +1,68 @@
+:root {
+  --row-height: 4rem;
+  --column-min-width: 7rem;
+  --time-periods: 8;
+}
+
+.container {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 60rem;
+  position: relative;
+}
+
+.week-schedule {
+  display: flex;
+  position: relative;
+  height: calc((var(--time-periods) + 1) * var(--row-height));
+  width: 100%;
+  left: 0;
+  top: 0;
+}
+
+.day-label {
+  box-sizing: border-box;
+  border: 0px solid;
+  border-bottom-width: 1px;
+  height: var(--row-height);
+  min-width: var(--column-min-width);
+  text-align: center;
+}
+
+.day {
+  flex-grow: 1;
+  box-sizing: border-box;
+  border: 0px solid;
+  border-left-width: 1px;
+  min-width: var(--column-min-width);
+  justify-content: center;
+  position: relative;
+}
+
+.events {
+  list-style: none;
+}
+
+.event {
+  background: green;
+  position: absolute;
+  left: 0;
+  min-height: var(--row-height);
+  width: 100%;
+}
+
+.schedule-grid {
+  display: block;
+  left: 0;
+  position: absolute;
+  top: var(--row-height);
+  width: 100%;
+}
+
+.grid-row {
+  position: relative;
+  height: var(--row-height);
+  box-sizing: border-box;
+  border: 0px solid;
+  border-bottom-width: 1px;
+}

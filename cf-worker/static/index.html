@@ -4,9 +4,86 @@
     <title></title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link href="css/style.css" rel="stylesheet" />
+    <link href="style.css" rel="stylesheet" />
   </head>
+
   <body>
-    Hello world!
+    <div class="container">
+      <div class="week-schedule">
+        <section class="day">
+          <div class="day-label">Monday</div>
+          <ul class="events">
+            <li>
+              <div class="event" style="top: calc(var(--row-height) * 1)">
+                Class1
+              </div>
+            </li>
+            <li>
+              <div class="event" style="top: calc(var(--row-height) * 3)">
+                Class2
+              </div>
+            </li>
+          </ul>
+        </section>
+        <section class="day">
+          <div class="day-label">Tuesday</div>
+          <ul></ul>
+        </section>
+        <section class="day">
+          <div class="day-label">Wednesday</div>
+          <ul class="events">
+            <li>
+              <div class="event" style="top: calc(var(--row-height) * 2)">
+                Class3
+              </div>
+            </li>
+            <li>
+              <div class="event" style="top: calc(var(--row-height) * 3)">
+                Class4
+              </div>
+            </li>
+            <li>
+              <div class="event" style="top: calc(var(--row-height) * 5)">
+                Class5
+              </div>
+            </li>
+          </ul>
+        </section>
+        <section class="day">
+          <div class="day-label">Thursday</div>
+          <ul></ul>
+        </section>
+        <section class="day">
+          <div class="day-label">Friday</div>
+          <ul class="events">
+            <li>
+              <div class="event" style="top: calc(var(--row-height) * 1.5)">
+                Class6
+              </div>
+            </li>
+            <li>
+              <div class="event" style="top: calc(var(--row-height) * 3.8)">
+                Class7
+              </div>
+            </li>
+          </ul>
+        </section>
+        <section class="day" style="border-right-width: 1px">
+          <div class="day-label">Saturday</div>
+          <ul></ul>
+        </section>
+      </div>
+      <!-- Grid -->
+      <div class="schedule-grid" aria-hidden="true">
+        <div class="grid-row"></div>
+        <div class="grid-row"></div>
+        <div class="grid-row"></div>
+        <div class="grid-row"></div>
+        <div class="grid-row"></div>
+        <div class="grid-row"></div>
+        <div class="grid-row"></div>
+        <div class="grid-row"></div>
+      </div>
+    </div>
   </body>
 </html>
