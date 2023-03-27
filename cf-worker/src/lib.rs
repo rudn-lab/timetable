@@ -51,6 +51,9 @@ async fn handle_update<D>(mut req: Request, ctx: RouteContext<D>) -> Result<Resp
     }
 
     let kv = ctx.kv("TIMETABLE_KV")?;
+    for day in Day::values() {
+        kv.delete(&serde_json::to_string(&day)?).await?;
+    }
     let data: HashMap<Day, [NaiveTime; 2]> = req.json().await?;
     for (day, time) in data {
         kv.put(&serde_json::to_string(&day)?, serde_json::to_string(&time)?)?

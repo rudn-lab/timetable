@@ -7,4 +7,18 @@ pub enum Day {
     Wednesday,
     Thursday,
     Friday,
+    Saturday,
+}
+
+impl Day {
+    pub fn values() -> [Self; 6] {
+        [
+            Self::Monday,
+            Self::Tuesday,
+            Self::Wednesday,
+            Self::Thursday,
+            Self::Friday,
+            Self::Saturday,
+        ]
+    }
 }
