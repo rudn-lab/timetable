@@ -5,6 +5,7 @@ import re
 import httpx
 from datetime import time
 import typing
+import os
 
 
 class Timetable(ui.Modal, title="New opening and closing times of the RUDN Lab"):
@@ -85,7 +86,11 @@ class Timetable(ui.Modal, title="New opening and closing times of the RUDN Lab")
         elif payload:
 
             async def post_new_timetable_info(interaction: discord.Interaction):
-                headers = {"Content-Type": "application/json"}
+                WORKER_AUTH_TOKEN = os.getenv("WORKER_AUTH")
+                headers = {
+                    "Content-Type": "application/json",
+                    "Auth-Token": WORKER_AUTH_TOKEN,
+                }
                 url = "https://timetable.rudn-lab.ru/update"
                 async with httpx.AsyncClient() as client:
                     r = await client.post(url, headers=headers, json=payload)

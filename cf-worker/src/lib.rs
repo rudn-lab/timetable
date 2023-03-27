@@ -46,6 +46,10 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
 }
 
 async fn handle_update<D>(mut req: Request, ctx: RouteContext<D>) -> Result<Response> {
+    if let Some(err_resp) = auth(&req, &ctx).await {
+        return err_resp;
+    }
+
     let kv = ctx.kv("TIMETABLE_KV")?;
     let data: HashMap<Day, [NaiveTime; 2]> = req.json().await?;
     for (day, time) in data {
@@ -55,6 +59,35 @@ async fn handle_update<D>(mut req: Request, ctx: RouteContext<D>) -> Result<Resp
     }
 
     Response::ok("Received new timetable")
+}
+
+async fn auth<D>(req: &Request, ctx: &RouteContext<D>) -> Option<Result<Response>> {
+    if let Ok(is_valid) = validate_token(&req, &ctx).await {
+        if !is_valid {
+            return Some(Response::error("Unauthorized", 401));
+        }
+    } else {
+        return Some(Response::error("Could not validate auth token", 500));
+    }
+
+    None
+}
+
+async fn validate_token<D>(req: &Request, ctx: &RouteContext<D>) -> Result<bool> {
+    let kv = ctx.kv("TIMETABLE_KV")?;
+    let valid_token = kv
+        .get("WORKER_AUTH")
+        .text()
+        .await?
+        .ok_or("No auth token in KV")?;
+    let got_token = req
+        .headers()
+        .get("Auth-Token")?
+        .ok_or("No header 'Auth-Token'")?;
+
+    console_log!("{valid_token}\n{got_token}");
+
+    Ok(valid_token == got_token)
 }
 
 #[event(scheduled)]
