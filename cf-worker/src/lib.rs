@@ -3,6 +3,7 @@ use worker::*;
 mod asset;
 mod data;
 mod handlers;
+mod templating;
 mod utils;
 
 fn log_request(req: &Request) {
@@ -22,7 +23,7 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
 
     let router = Router::new();
     router
-        .get_async("/", |_, ctx| asset::serve_asset(ctx))
+        .get_async("/", handlers::handle_index)
         .get_async("/:asset", |_, ctx| asset::serve_asset(ctx))
         .post_async("/update", handlers::handle_update)
         .get("/worker-version", |_, ctx| {

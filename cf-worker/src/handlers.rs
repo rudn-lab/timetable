@@ -4,8 +4,37 @@ use chrono::NaiveTime;
 use worker::{kv::KvError, Env, Response, Result};
 use worker::{Request, RouteContext};
 
-use crate::data::Day;
+use crate::asset::get_asset_data;
+use crate::data::*;
+use crate::templating::apply_template;
+use crate::templating::context;
 use crate::utils::auth;
+
+pub async fn handle_index<D>(_: Request, ctx: RouteContext<D>) -> Result<Response> {
+    if let Some(index_data) = get_asset_data(&ctx, "index.html").await {
+        let mut tt: Timetable = Timetable::new();
+        tt.insert(
+            Day::Monday,
+            vec![Event {
+                name: String::from("Math"),
+                offset: 0.0,
+            }],
+        );
+        tt.insert(
+            Day::Friday,
+            vec![Event {
+                name: String::from("CS"),
+                offset: 3.0,
+            }],
+        );
+        let ctx = context!(Timetable => tt);
+        if let Ok(index) = String::from_utf8(index_data) {
+            let index = apply_template("index.html", &index, ctx);
+            return Response::from_html(index);
+        }
+    }
+    todo!()
+}
 
 pub async fn handle_update<D>(mut req: Request, ctx: RouteContext<D>) -> Result<Response> {
     if let Some(err_resp) = auth(&req, &ctx).await {

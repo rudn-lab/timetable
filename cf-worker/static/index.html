@@ -1,89 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <title></title>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link href="style.css" rel="stylesheet" />
-  </head>
 
-  <body>
-    <div class="container">
-      <div class="week-schedule">
-        <section class="day">
-          <div class="day-label">Monday</div>
-          <ul class="events">
-            <li>
-              <div class="event" style="top: calc(var(--row-height) * 1)">
-                Class1
-              </div>
-            </li>
-            <li>
-              <div class="event" style="top: calc(var(--row-height) * 3)">
-                Class2
-              </div>
-            </li>
-          </ul>
-        </section>
-        <section class="day">
-          <div class="day-label">Tuesday</div>
-          <ul></ul>
-        </section>
-        <section class="day">
-          <div class="day-label">Wednesday</div>
-          <ul class="events">
-            <li>
-              <div class="event" style="top: calc(var(--row-height) * 2)">
-                Class3
-              </div>
-            </li>
-            <li>
-              <div class="event" style="top: calc(var(--row-height) * 3)">
-                Class4
-              </div>
-            </li>
-            <li>
-              <div class="event" style="top: calc(var(--row-height) * 5)">
-                Class5
-              </div>
-            </li>
-          </ul>
-        </section>
-        <section class="day">
-          <div class="day-label">Thursday</div>
-          <ul></ul>
-        </section>
-        <section class="day">
-          <div class="day-label">Friday</div>
-          <ul class="events">
-            <li>
-              <div class="event" style="top: calc(var(--row-height) * 1.5)">
-                Class6
-              </div>
-            </li>
-            <li>
-              <div class="event" style="top: calc(var(--row-height) * 3.8)">
-                Class7
-              </div>
-            </li>
-          </ul>
-        </section>
-        <section class="day" style="border-right-width: 1px">
-          <div class="day-label">Saturday</div>
-          <ul></ul>
-        </section>
+<head>
+  <title></title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="style.css" rel="stylesheet" />
+</head>
+
+<body>
+  <div class="container">
+    <div>
+      <div class="labels">
+        <div class="day-label">Monday</div>
+        <div class="day-label">Tuesday</div>
+        <div class="day-label">Wednesday</div>
+        <div class="day-label">Thursday</div>
+        <div class="day-label">Friday</div>
+        <div class="day-label">Saturday</div>
       </div>
-      <!-- Grid -->
-      <div class="schedule-grid" aria-hidden="true">
-        <div class="grid-row"></div>
-        <div class="grid-row"></div>
-        <div class="grid-row"></div>
-        <div class="grid-row"></div>
-        <div class="grid-row"></div>
-        <div class="grid-row"></div>
-        <div class="grid-row"></div>
-        <div class="grid-row"></div>
+      <div class="grid">
+        <div class="week-schedule">
+          {% for day in [ "Monday", "Tuesday", "Wednesday", "Thursday",
+          "Friday", "Saturday" ] %}
+          <!-- {{day}} -->
+          {% if day == "Saturday" %}
+          <section class="day" style="border-right-width: 1px">
+            {% else %}
+            <section class="day">
+              {% endif %}
+              <ul class="events">
+                {% for event in Timetable[day]%}
+                <li>
+                  <div class="event" style="top: calc(var(--row-height) * {{event.offset}})">
+                    {{event.name}}
+                  </div>
+                </li>
+                {% endfor %}
+              </ul>
+            </section>
+            {% endfor %}
+        </div>
+        <div class="schedule-grid" aria-hidden="true">
+          <div class="grid-row"></div>
+          <div class="grid-row"></div>
+          <div class="grid-row"></div>
+          <div class="grid-row"></div>
+          <div class="grid-row"></div>
+          <div class="grid-row"></div>
+          <div class="grid-row"></div>
+          <div class="grid-row"></div>
+        </div>
       </div>
     </div>
-  </body>
+  </div>
+</body>
+
 </html>
