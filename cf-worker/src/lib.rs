@@ -1,11 +1,8 @@
-use std::collections::HashMap;
-
-use chrono::NaiveTime;
-use data::Day;
-use worker::{kv::KvError, *};
+use worker::*;
 
 mod asset;
 mod data;
+mod handlers;
 mod utils;
 
 fn log_request(req: &Request) {
@@ -27,78 +24,30 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
     router
         .get_async("/", |_, ctx| asset::serve_asset(ctx))
         .get_async("/:asset", |_, ctx| asset::serve_asset(ctx))
-        .post_async("/update", handle_update)
+        .post_async("/update", handlers::handle_update)
         .get("/worker-version", |_, ctx| {
             Response::ok(ctx.var("WORKERS_RS_VERSION")?.to_string())
         })
         .post_async("/cache-groups", |_, ctx| async move {
-            match cache_student_goups(&ctx.env).await {
+            match handlers::cache_student_goups(&ctx.env).await {
                 Ok(stat) => Response::ok(stat),
                 Err(msg) => Response::error(msg.to_string(), 500),
             }
         })
         .post_async("/cache-timetables", |_, _| async move {
-            let _res = cache_student_timetables().await;
+            let _res = handlers::cache_student_timetables().await;
             Response::ok("cached")
         })
         .run(req, env)
         .await
 }
 
-async fn handle_update<D>(mut req: Request, ctx: RouteContext<D>) -> Result<Response> {
-    if let Some(err_resp) = auth(&req, &ctx).await {
-        return err_resp;
-    }
-
-    let kv = ctx.kv("TIMETABLE_KV")?;
-    for day in Day::values() {
-        kv.delete(&serde_json::to_string(&day)?).await?;
-    }
-    let data: HashMap<Day, [NaiveTime; 2]> = req.json().await?;
-    for (day, time) in data {
-        kv.put(&serde_json::to_string(&day)?, serde_json::to_string(&time)?)?
-            .execute()
-            .await?;
-    }
-
-    Response::ok("Received new timetable")
-}
-
-async fn auth<D>(req: &Request, ctx: &RouteContext<D>) -> Option<Result<Response>> {
-    if let Ok(is_valid) = validate_token(&req, &ctx).await {
-        if !is_valid {
-            return Some(Response::error("Unauthorized", 401));
-        }
-    } else {
-        return Some(Response::error("Could not validate auth token", 500));
-    }
-
-    None
-}
-
-async fn validate_token<D>(req: &Request, ctx: &RouteContext<D>) -> Result<bool> {
-    let kv = ctx.kv("TIMETABLE_KV")?;
-    let valid_token = kv
-        .get("WORKER_AUTH")
-        .text()
-        .await?
-        .ok_or("No auth token in KV")?;
-    let got_token = req
-        .headers()
-        .get("Auth-Token")?
-        .ok_or("No header 'Auth-Token'")?;
-
-    console_log!("{valid_token}\n{got_token}");
-
-    Ok(valid_token == got_token)
-}
-
 #[event(scheduled)]
 pub async fn cron(event: ScheduledEvent, env: Env, _: ScheduleContext) {
     let cron = event.cron();
     let res = match cron.as_str() {
-        "0 0 1 * *" => cache_student_goups(&env).await,
-        "0 0 * * mon" => cache_student_timetables().await,
+        "0 0 1 * *" => handlers::cache_student_goups(&env).await,
+        "0 0 * * mon" => handlers::cache_student_timetables().await,
         _ => unreachable!("All cron jobs should be covered"),
     };
 
@@ -106,24 +55,4 @@ pub async fn cron(event: ScheduledEvent, env: Env, _: ScheduleContext) {
         Ok(stat) => console_log!("Cron event '{cron}' log: {stat}"),
         Err(msg) => console_error!("Cron event '{cron}' error: {msg}"),
     }
-}
-
-async fn cache_student_goups(env: &Env) -> Result<String> {
-    let kv = env.kv("RUDN_FACULTIES")?;
-    let list = kv.list().execute().await?.keys;
-    for key in list {
-        let uuid = kv
-            .get(&key.name)
-            .text()
-            .await?
-            .ok_or(KvError::InvalidKvStore(format!(
-                "No such key error: key={key:?}"
-            )));
-    }
-
-    todo!("get uuid; request all groups for this faculty; add them to new kv")
-}
-
-async fn cache_student_timetables() -> Result<String> {
-    todo!("for each faculty and each group request timetable; add to kv")
 }
