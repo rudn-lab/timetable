@@ -13,22 +13,19 @@
 
 .week-schedule {
   display: flex;
-  /* flex-direction: column; */
   position: relative;
   height: calc(var(--time-periods) * var(--row-height));
-  width: 100%;
-  left: 0;
-  top: 0;
 }
 
 .day-label {
+  flex-grow: 1;
+  flex-basis: 0;
   box-sizing: border-box;
   border: 0px solid;
   border-bottom-width: 1px;
-  /* height: var(--row-height); */
+  border-left-width: 1px;
   min-width: var(--column-min-width);
   text-align: center;
-  flex-grow: 1;
 }
 
 .labels {
@@ -42,6 +39,7 @@
 
 .day {
   flex-grow: 1;
+  flex-basis: 0;
   box-sizing: border-box;
   border: 0px solid;
   border-left-width: 1px;
