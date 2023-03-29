@@ -57,7 +57,6 @@
   background: green;
   position: absolute;
   left: 0;
-  min-height: var(--row-height);
   width: 100%;
 }
 
