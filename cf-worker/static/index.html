@@ -32,7 +32,8 @@
               <ul class="events">
                 {% for event in Timetable[day]%}
                 <li>
-                  <div class="event" style="top: calc(var(--row-height) * {{event.offset}})">
+                  <div class="event"
+                    style="top: calc(var(--row-height) * {{event.start_offset}}); height: calc(var(--row-height) * {{event.duration}})">
                     {{event.name}}
                   </div>
                 </li>

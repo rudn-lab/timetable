@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use chrono::NaiveTime;
+use worker::kv::KvStore;
 use worker::{kv::KvError, Env, Response, Result};
 use worker::{Request, RouteContext};
 
@@ -12,28 +13,41 @@ use crate::utils::auth;
 
 pub async fn handle_index<D>(_: Request, ctx: RouteContext<D>) -> Result<Response> {
     if let Some(index_data) = get_asset_data(&ctx, "index.html").await {
-        let mut tt: Timetable = Timetable::new();
-        tt.insert(
-            Day::Monday,
-            vec![Event {
-                name: String::from("Math"),
-                offset: 0.0,
-            }],
-        );
-        tt.insert(
-            Day::Friday,
-            vec![Event {
-                name: String::from("CS"),
-                offset: 3.0,
-            }],
-        );
-        let ctx = context!(Timetable => tt);
-        if let Ok(index) = String::from_utf8(index_data) {
-            let index = apply_template("index.html", &index, ctx);
-            return Response::from_html(index);
+        if let Ok(kv) = ctx.kv("TIMETABLE_KV") {
+            let tt = load_timetable(&kv).await;
+            let ctx = context!(Timetable => tt);
+            if let Ok(index) = String::from_utf8(index_data) {
+                let index = apply_template("index.html", &index, ctx);
+                return Response::from_html(index);
+            }
         }
     }
     todo!()
+}
+
+async fn load_timetable(kv: &KvStore) -> Timetable {
+    let mut tt = Timetable::new();
+    for day in Day::values() {
+        let possible_lab_time: std::result::Result<Option<[NaiveTime; 2]>, KvError> =
+            kv.get(&serde_json::to_string(&day).unwrap()).json().await;
+        if let Ok(Some(lab_time)) = possible_lab_time {
+            let calc_time_offset = |time: NaiveTime| -> TimeOffset {
+                ((time - *FIRST_CLASS_START).num_minutes() as f64)
+                    / (CLASS_DURATION.num_minutes() as f64)
+            };
+            let class_start_offset = calc_time_offset(lab_time[0]);
+            let class_duration = calc_time_offset(lab_time[1]) - class_start_offset;
+
+            let event = Event {
+                name: String::from("Lab"),
+                start_offset: class_start_offset,
+                duration: class_duration,
+            };
+
+            tt.insert(day, vec![event]);
+        }
+    }
+    tt
 }
 
 pub async fn handle_update<D>(mut req: Request, ctx: RouteContext<D>) -> Result<Response> {

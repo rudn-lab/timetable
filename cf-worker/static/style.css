@@ -15,6 +15,7 @@
   display: flex;
   position: relative;
   height: calc(var(--time-periods) * var(--row-height));
+  z-index: 2;
 }
 
 .day-label {
@@ -61,6 +62,7 @@
 }
 
 .schedule-grid {
+  z-index: 1;
   display: block;
   left: 0;
   position: absolute;
