@@ -15,6 +15,3 @@ command = "cargo install -q worker-build && worker-build --release"
 
 [site]
 bucket = "./static"
-
-[triggers]
-crons = ["0 0 * * mon","0 0 1 * *"]
