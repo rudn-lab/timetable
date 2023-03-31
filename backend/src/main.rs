@@ -8,11 +8,11 @@ enum AddressOption {
     Public,
 }
 
-impl Into<Ipv4Addr> for AddressOption {
-    fn into(self) -> Ipv4Addr {
-        match self {
-            AddressOption::Local => Ipv4Addr::new(127, 0, 0, 1),
-            AddressOption::Public => Ipv4Addr::new(0, 0, 0, 0),
+impl From<AddressOption> for Ipv4Addr {
+    fn from(value: AddressOption) -> Self {
+        match value {
+            AddressOption::Local => Self::new(127, 0, 0, 1),
+            AddressOption::Public => Self::new(0, 0, 0, 0),
         }
     }
 }
@@ -26,7 +26,7 @@ struct Args {
     port: u16,
 }
 
-#[actix_web::main]
+#[tokio::main]
 async fn main() -> std::io::Result<()> {
     let args = Args::parse();
     let ip = Into::<Ipv4Addr>::into(args.address);
