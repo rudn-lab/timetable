@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use chrono::NaiveTime;
 use worker::kv::KvStore;
-use worker::{kv::KvError, Env, Response, Result};
+use worker::{kv::KvError, Response, Result};
 use worker::{Request, RouteContext};
 
 use crate::asset::get_asset_data;
@@ -67,24 +67,4 @@ pub async fn handle_update<D>(mut req: Request, ctx: RouteContext<D>) -> Result<
     }
 
     Response::ok("Received new timetable")
-}
-
-pub async fn cache_student_goups(env: &Env) -> Result<String> {
-    let kv = env.kv("RUDN_FACULTIES")?;
-    let list = kv.list().execute().await?.keys;
-    for key in list {
-        let _uuid = kv
-            .get(&key.name)
-            .text()
-            .await?
-            .ok_or(KvError::InvalidKvStore(format!(
-                "No such key error: key={key:?}"
-            )));
-    }
-
-    todo!("get uuid; request all groups for this faculty; add them to new kv")
-}
-
-pub async fn cache_student_timetables() -> Result<String> {
-    todo!("for each faculty and each group request timetable; add to kv")
 }
