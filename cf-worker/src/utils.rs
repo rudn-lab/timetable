@@ -13,7 +13,7 @@ cfg_if! {
 }
 
 pub async fn auth<D>(req: &Request, ctx: &RouteContext<D>) -> Option<Result<Response>> {
-    if let Ok(is_valid) = validate_token(&req, &ctx).await {
+    if let Ok(is_valid) = validate_token(req, ctx).await {
         if !is_valid {
             return Some(Response::error("Unauthorized", 401));
         }

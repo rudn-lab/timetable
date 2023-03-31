@@ -23,7 +23,7 @@ pub async fn serve_asset<D>(ctx: RouteContext<D>) -> worker::Result<Response> {
         resp.with_status(404)
     };
 
-    return Ok(response);
+    Ok(response)
 }
 
 pub async fn get_asset_data<D>(ctx: &RouteContext<D>, asset_name: &str) -> Option<Vec<u8>> {

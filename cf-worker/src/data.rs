@@ -1,6 +1,5 @@
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
-use worker::kv::{KvError, KvStore};
 
 use chrono::{Duration, NaiveTime};
 use serde::{Deserialize, Serialize};
