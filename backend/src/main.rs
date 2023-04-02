@@ -1,4 +1,4 @@
-use backend::run;
+use backend::*;
 use clap::{Parser, ValueEnum};
 use std::net::Ipv4Addr;
 
@@ -26,10 +26,15 @@ struct Args {
     port: u16,
 }
 
-#[tokio::main]
+#[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    // access logs are printed with the INFO level so ensure it is enabled by default
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+
     let args = Args::parse();
     let ip = Into::<Ipv4Addr>::into(args.address);
 
-    run(ip, args.port).await
+    run_scheduler().await;
+
+    run_server(ip, args.port).await
 }

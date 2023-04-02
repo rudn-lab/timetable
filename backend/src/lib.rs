@@ -1,35 +1,74 @@
+use actix_web::{middleware::Logger, services, App, HttpServer};
+use delay_timer::prelude::*;
 use std::net::Ipv4Addr;
 
-use actix_web::{get, post, web, App, HttpServer, Responder};
+mod routes;
+mod scheduling;
+mod scraping;
 
-#[get("/")]
-async fn index() -> impl Responder {
-    "Hello, World!"
+pub async fn run_server(ip: Ipv4Addr, port: u16) -> std::io::Result<()> {
+    HttpServer::new(|| {
+        App::new()
+            // https://docs.rs/actix-web/latest/actix_web/middleware/struct.Logger.html#format
+            .wrap(Logger::default())
+            .service(services![
+                routes::cache_facultis,
+                routes::cache_facultis,
+                routes::cache_timetables
+            ])
+    })
+    .bind((ip, port))?
+    .run()
+    .await
 }
 
-#[get("/{name}")]
-async fn hello(name: web::Path<String>) -> impl Responder {
-    format!("Hello {}!", &name)
-}
+pub async fn run_scheduler() {
+    let timer = DelayTimerBuilder::default().build();
+    let _ = timer
+        .insert_task(
+            TaskBuilder::default()
+                .set_frequency_repeated_by_cron_str("0 * * * * *")
+                .spawn_async_routine(|| async {
+                    log::info!("Running test cron job \"0 * * * * *\"");
+                    print!("Hello, World!");
+                })
+                .unwrap(),
+        )
+        .unwrap();
 
-#[post("/cache/faculties")]
-async fn cache_facultis() -> impl Responder {
-    todo!()
-}
+    let _ = timer
+        .insert_task(
+            TaskBuilder::default()
+                .set_frequency_repeated_by_cron_str("0 0 0 * * 1")
+                .spawn_async_routine(|| async {
+                    log::info!("Running cron job \"0 0 0 * * 1\"");
+                    scraping::scrape_timetables().await
+                })
+                .unwrap(),
+        )
+        .unwrap();
 
-#[post("/cache/groups")]
-async fn cache_groups() -> impl Responder {
-    todo!()
-}
+    let _ = timer
+        .insert_task(
+            TaskBuilder::default()
+                .set_frequency_repeated_by_cron_str("0 0 0 1 * *")
+                .spawn_async_routine(|| async {
+                    log::info!("Running cron job \"0 0 0 1 * *\"");
+                    scraping::scrape_groups().await;
+                })
+                .unwrap(),
+        )
+        .unwrap();
 
-#[post("/cache/timetables")]
-async fn cache_timetables() -> impl Responder {
-    todo!()
-}
-
-pub async fn run(ip: Ipv4Addr, port: u16) -> std::io::Result<()> {
-    HttpServer::new(|| App::new().service(index).service(hello))
-        .bind((ip, port))?
-        .run()
-        .await
+    let _ = timer
+        .insert_task(
+            TaskBuilder::default()
+                .set_frequency_repeated_by_cron_str("0 0 0 1 9 *")
+                .spawn_async_routine(|| async {
+                    log::info!("Running cron job \"0 0 0 1 9 *\"");
+                    scraping::scrape_faculties().await;
+                })
+                .unwrap(),
+        )
+        .unwrap();
 }
