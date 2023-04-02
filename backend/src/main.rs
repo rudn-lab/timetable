@@ -34,7 +34,5 @@ async fn main() -> std::io::Result<()> {
     let args = Args::parse();
     let ip = Into::<Ipv4Addr>::into(args.address);
 
-    run_scheduler().await;
-
-    run_server(ip, args.port).await
+    init(ip, args.port).await
 }
