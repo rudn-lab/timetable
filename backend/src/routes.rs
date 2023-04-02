@@ -4,7 +4,7 @@ use actix_web::{post, web, HttpResponse, Responder};
 
 use crate::{database::Database, scraping};
 
-#[post("/cache/faculties")]
+#[post("/scrape/faculties")]
 async fn cache_facultis(db: web::Data<Arc<Mutex<Database>>>) -> impl Responder {
     let faculties = scraping::scrape_faculties().await;
 
@@ -14,13 +14,13 @@ async fn cache_facultis(db: web::Data<Arc<Mutex<Database>>>) -> impl Responder {
     HttpResponse::Accepted().finish()
 }
 
-#[post("/cache/groups")]
+#[post("/scrape/groups")]
 async fn cache_groups() -> impl Responder {
     scraping::scrape_groups().await;
     HttpResponse::Accepted().finish()
 }
 
-#[post("/cache/timetables")]
+#[post("/scrape/timetables")]
 async fn cache_timetables() -> impl Responder {
     scraping::scrape_timetables().await;
     HttpResponse::Accepted().finish()
