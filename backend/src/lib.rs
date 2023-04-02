@@ -1,6 +1,6 @@
 use actix_web::{middleware::Logger, services, web, App, HttpServer};
 use database::Database;
-use delay_timer::prelude::*;
+use delay_timer::prelude::DelayTimerBuilder;
 use std::{
     net::Ipv4Addr,
     sync::{Arc, Mutex},
@@ -8,6 +8,7 @@ use std::{
 
 mod database;
 mod routes;
+mod scheduling;
 mod scraping;
 
 pub async fn init(ip: Ipv4Addr, port: u16) -> std::io::Result<()> {
@@ -44,71 +45,7 @@ async fn run_server(
 async fn run_scheduler(db: Arc<Mutex<Database>>) {
     let timer = DelayTimerBuilder::default().build();
 
-    let db_clone = db.clone();
-    // Test cron job, runs every minute
-    let _ = timer
-        .insert_task(
-            TaskBuilder::default()
-                .set_frequency_repeated_by_cron_str("0 * * * * *")
-                .spawn_async_routine(move || {
-                    let _db = db_clone.clone();
-                    async move {
-                        log::info!("Running test cron job \"0 * * * * *\"");
-                    }
-                })
-                .unwrap(),
-        )
-        .unwrap();
-
-    let db_clone = db.clone();
-    // Get faculties cron job, runs every 1st of September
-    let _ = timer
-        .insert_task(
-            TaskBuilder::default()
-                .set_frequency_repeated_by_cron_str("0 0 0 1 9 *")
-                .spawn_async_routine(move || {
-                    let db = db_clone.clone();
-                    async move {
-                        log::info!("Running cron job \"0 0 0 1 9 *\"");
-                        let faculties = scraping::scrape_faculties().await;
-                        let mut db = db.lock().unwrap();
-                        db.update_faculties(faculties);
-                    }
-                })
-                .unwrap(),
-        )
-        .unwrap();
-
-    let db_clone = db.clone();
-    // Get studeng groups cron job, runs every 1st day of any month
-    let _ = timer
-        .insert_task(
-            TaskBuilder::default()
-                .set_frequency_repeated_by_cron_str("0 0 0 1 * *")
-                .spawn_async_routine(move || {
-                    let _db = db_clone.clone();
-                    async move {
-                        log::info!("Running cron job \"0 0 0 1 * *\"");
-                        scraping::scrape_groups().await;
-                    }
-                })
-                .unwrap(),
-        )
-        .unwrap();
-
-    // Get studeng groups' timetables cron job, runs every Monday
-    let _ = timer
-        .insert_task(
-            TaskBuilder::default()
-                .set_frequency_repeated_by_cron_str("0 0 0 * * 1")
-                .spawn_async_routine(move || {
-                    let _db = db.clone();
-                    async move {
-                        log::info!("Running cron job \"0 0 0 * * 1\"");
-                        scraping::scrape_timetables().await
-                    }
-                })
-                .unwrap(),
-        )
-        .unwrap();
+    scheduling::schedule_scrape_faculties(&timer, db.clone());
+    scheduling::schedule_scrape_groups(&timer, db.clone());
+    scheduling::schedule_scrape_timetables(&timer, db);
 }
