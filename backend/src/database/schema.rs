@@ -2,7 +2,7 @@
 
 diesel::table! {
     faculties (uuid) {
-        uuid -> Nullable<Text>,
+        uuid -> Text,
         name -> Text,
     }
 }

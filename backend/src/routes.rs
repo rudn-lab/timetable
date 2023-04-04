@@ -1,27 +1,41 @@
 use std::sync::{Arc, Mutex};
 
-use actix_web::{post, web, HttpResponse, Responder};
+use actix_web::{get, web, HttpResponse, Responder};
 
 use crate::{database::Database, scraping};
 
-#[post("/scrape/faculties")]
-async fn cache_facultis(db: web::Data<Arc<Mutex<Database>>>) -> impl Responder {
-    let faculties = scraping::scrape_faculties().await;
+/// This route returns all faculties of the RUDN University from the database,
+/// if there is no faculties stored it scrapes info from the web and returns that.
+/// However, if some but not all faculties were deleted from the database
+/// this method will _not_ scrape them back
+#[get("/faculties")]
+pub async fn get_faculties(db: web::Data<Arc<Mutex<Database>>>) -> impl Responder {
+    let res = {
+        let mut db = db.lock().unwrap();
+        db.get_faculties()
+    };
 
-    let mut db = db.lock().unwrap();
-    db.update_faculties(faculties);
-
-    HttpResponse::Accepted().finish()
+    match res {
+        Some(faculties) => {
+            HttpResponse::Ok().body(serde_json::to_string(&faculties).unwrap_or_default())
+        }
+        None => {
+            let faculties = scraping::scrape_faculties().await;
+            let mut db = db.lock().unwrap();
+            db.update_faculties(&faculties);
+            HttpResponse::Ok().body(serde_json::to_string(&faculties).unwrap_or_default())
+        }
+    }
 }
 
-#[post("/scrape/groups")]
-async fn cache_groups() -> impl Responder {
+#[get("/groups")]
+pub async fn get_groups(_db: web::Data<Arc<Mutex<Database>>>) -> impl Responder {
     scraping::scrape_groups().await;
     HttpResponse::Accepted().finish()
 }
 
-#[post("/scrape/timetables")]
-async fn cache_timetables() -> impl Responder {
+#[get("/timetables")]
+pub async fn get_timetables(_db: web::Data<Arc<Mutex<Database>>>) -> impl Responder {
     scraping::scrape_timetables().await;
     HttpResponse::Accepted().finish()
 }

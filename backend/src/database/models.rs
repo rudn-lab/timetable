@@ -1,7 +1,8 @@
 use crate::database::schema::faculties;
 use diesel::prelude::*;
+use serde::{Deserialize, Serialize};
 
-#[derive(Queryable, Insertable, Debug)]
+#[derive(Queryable, Insertable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = faculties)]
 pub struct Faculty {
     pub uuid: String,

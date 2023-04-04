@@ -1,4 +1,4 @@
 CREATE TABLE faculties (
-  uuid TEXT PRIMARY KEY,
+  uuid TEXT PRIMARY KEY NOT NULL, -- WTF SQLite
   name TEXT NOT NUll UNIQUE
 )

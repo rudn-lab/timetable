@@ -17,7 +17,7 @@ pub fn schedule_scrape_faculties(timer: &DelayTimer, db: Arc<Mutex<Database>>) {
                         log::info!("Scraping university faculties");
                         let faculties = scraping::scrape_faculties().await;
                         let mut db = db.lock().unwrap();
-                        db.update_faculties(faculties);
+                        db.update_faculties(&faculties);
                     }
                 })
                 .unwrap(),

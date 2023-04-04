@@ -12,7 +12,7 @@ mod scheduling;
 mod scraping;
 
 pub async fn init(ip: Ipv4Addr, port: u16) -> std::io::Result<()> {
-    let db_conn = Database::establish_connection();
+    let db_conn = Database::new();
     let db_conn = Arc::new(Mutex::new(db_conn));
     let db_conn_web = web::Data::new(Arc::clone(&db_conn));
 
@@ -32,9 +32,9 @@ async fn run_server(
             // https://docs.rs/actix-web/latest/actix_web/middleware/struct.Logger.html#format
             .wrap(Logger::default())
             .service(services![
-                routes::cache_facultis,
-                routes::cache_facultis,
-                routes::cache_timetables
+                routes::get_faculties,
+                routes::get_groups,
+                routes::get_timetables
             ])
     })
     .bind((ip, port))?

@@ -12,7 +12,7 @@ pub struct Database {
 }
 
 impl Database {
-    pub fn establish_connection() -> Self {
+    pub fn new() -> Self {
         dotenv().ok();
 
         let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
@@ -21,12 +21,12 @@ impl Database {
         Self { conn }
     }
 
-    pub fn update_faculties(&mut self, faculties: Vec<models::Faculty>) {
+    pub fn update_faculties(&mut self, faculties: &Vec<models::Faculty>) {
         // Insert faculties one by one so that if there's a new faculty at the end of the list it
         // will be added even if all previous throw UniqueViolation errors
         for faculty in faculties {
             match diesel::insert_into(schema::faculties::table)
-                .values(&faculty)
+                .values(faculty)
                 .execute(&mut self.conn)
             {
                 Ok(_) => log::info!(
@@ -41,7 +41,31 @@ impl Database {
                         faculty.uuid
                     )
                 }
-                Err(msg) => log::error!("{msg}"),
+                Err(msg) => log::error!(
+                    "Error: '{}' while inserting faculty '{}' with uuid: '{}'",
+                    msg,
+                    faculty.name,
+                    faculty.uuid
+                ),
+            }
+        }
+    }
+
+    /// Returns all current faculties of the RUDN university,
+    /// or None if the database is empty or if there is an error
+    pub fn get_faculties(&mut self) -> Option<Vec<models::Faculty>> {
+        use schema::faculties::dsl::*;
+        match faculties.load::<models::Faculty>(&mut self.conn) {
+            Ok(val) => {
+                if !val.is_empty() {
+                    Some(val)
+                } else {
+                    None
+                }
+            }
+            Err(err) => {
+                log::error!("{err}");
+                None
             }
         }
     }
