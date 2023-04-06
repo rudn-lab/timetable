@@ -1,8 +1,11 @@
 use std::sync::{Arc, Mutex};
 
-use actix_web::{get, web, HttpResponse, Responder};
+use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
 
 use crate::{database::Database, scraping};
+
+mod util;
+use util::*;
 
 /// This route returns all faculties of the RUDN University from the database,
 /// if there is no faculties stored it scrapes info from the web and returns that.
@@ -29,7 +32,11 @@ pub async fn get_faculties(db: web::Data<Arc<Mutex<Database>>>) -> impl Responde
 }
 
 #[get("/groups")]
-pub async fn get_groups(_db: web::Data<Arc<Mutex<Database>>>) -> impl Responder {
+pub async fn get_groups(req: HttpRequest, _db: web::Data<Arc<Mutex<Database>>>) -> impl Responder {
+    if let Some(query) = req.uri().query() {
+        let params = parse_url_params(query);
+        println!("{params:?}");
+    }
     scraping::scrape_groups().await;
     HttpResponse::Accepted().finish()
 }
