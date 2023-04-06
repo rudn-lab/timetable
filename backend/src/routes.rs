@@ -50,16 +50,21 @@ pub async fn get_groups(req: HttpRequest, db: web::Data<Arc<Mutex<Database>>>) -
 
             if let Some(faculties) = query_res {
                 let result = scraping::scrape_groups(faculties).await;
-                println! {"{:?}", serde_json::to_string(&result)};
                 HttpResponse::Ok().body(serde_json::to_string(&result).unwrap_or_default())
                 // Todo: update the database
             } else {
                 // Update itself
-                let _ = reqwest::get("https://timetable-api.rudn-lab.ru/faculties").await;
+                let _ = reqwest::get(format!(
+                    "{}:{}/faculties",
+                    req.connection_info().scheme(),
+                    req.headers().get("host").unwrap().to_str().unwrap()
+                ))
+                .await;
                 let mut db = db.lock().unwrap();
-                let result = db
+                let faculties = db
                     .get_faculties(FacultiesSelection::Partial(&params.faculties))
                     .unwrap_or_default();
+                let result = scraping::scrape_groups(faculties).await;
                 HttpResponse::Ok().body(serde_json::to_string(&result).unwrap_or_default())
             }
         }
