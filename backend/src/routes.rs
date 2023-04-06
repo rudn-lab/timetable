@@ -1,11 +1,14 @@
 use std::sync::{Arc, Mutex};
 
 use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
+use serde::Deserialize;
 
-use crate::{database::Database, scraping};
+use crate::{
+    database::{models::Uuid, *},
+    scraping,
+};
 
-mod util;
-use util::*;
+// Todo: make use of hal+json to give links to resources
 
 /// This route returns all faculties of the RUDN University from the database,
 /// if there is no faculties stored it scrapes info from the web and returns that.
@@ -13,12 +16,12 @@ use util::*;
 /// this method will _not_ scrape them back
 #[get("/faculties")]
 pub async fn get_faculties(db: web::Data<Arc<Mutex<Database>>>) -> impl Responder {
-    let res = {
+    let query_res = {
         let mut db = db.lock().unwrap();
-        db.get_faculties()
+        db.get_faculties(FacultiesSelection::Total)
     };
 
-    match res {
+    match query_res {
         Some(faculties) => {
             HttpResponse::Ok().body(serde_json::to_string(&faculties).unwrap_or_default())
         }
@@ -31,14 +34,40 @@ pub async fn get_faculties(db: web::Data<Arc<Mutex<Database>>>) -> impl Responde
     }
 }
 
+#[derive(Debug, Deserialize)]
+struct Params {
+    faculties: Vec<Uuid>,
+}
+
 #[get("/groups")]
-pub async fn get_groups(req: HttpRequest, _db: web::Data<Arc<Mutex<Database>>>) -> impl Responder {
-    if let Some(query) = req.uri().query() {
-        let params = parse_url_params(query);
-        println!("{params:?}");
+pub async fn get_groups(req: HttpRequest, db: web::Data<Arc<Mutex<Database>>>) -> impl Responder {
+    match serde_qs::from_str::<Params>(req.query_string()) {
+        Ok(params) => {
+            let query_res = {
+                let mut db = db.lock().unwrap();
+                db.get_faculties(FacultiesSelection::Partial(&params.faculties))
+            };
+
+            if let Some(faculties) = query_res {
+                let result = scraping::scrape_groups(faculties).await;
+                println! {"{:?}", serde_json::to_string(&result)};
+                HttpResponse::Ok().body(serde_json::to_string(&result).unwrap_or_default())
+                // Todo: update the database
+            } else {
+                // Update itself
+                let _ = reqwest::get("https://timetable-api.rudn-lab.ru/faculties").await;
+                let mut db = db.lock().unwrap();
+                let result = db
+                    .get_faculties(FacultiesSelection::Partial(&params.faculties))
+                    .unwrap_or_default();
+                HttpResponse::Ok().body(serde_json::to_string(&result).unwrap_or_default())
+            }
+        }
+        Err(e) => {
+            log::error!("{e:?}");
+            HttpResponse::BadRequest().body("Invalid url query")
+        }
     }
-    scraping::scrape_groups().await;
-    HttpResponse::Accepted().finish()
 }
 
 #[get("/timetables")]

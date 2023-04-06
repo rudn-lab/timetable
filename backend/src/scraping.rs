@@ -1,15 +1,18 @@
-use crate::database::models::Faculty;
+use std::collections::HashMap;
+
+use crate::database::models::*;
 use scraper::{Html, Selector};
 
 pub async fn scrape_faculties() -> Vec<Faculty> {
-    let body = reqwest::get("https://www.rudn.ru/education/schedule")
+    log::info!("Scraping faculties");
+    let response = reqwest::get("https://www.rudn.ru/education/schedule")
         .await
         .unwrap()
         .text()
         .await
         .unwrap();
 
-    let document = Html::parse_document(&body);
+    let document = Html::parse_document(&response);
 
     // Select 'select' element for faculties
     let faculty_select_element_selector = Selector::parse(r#"select[name="facultet"]"#).unwrap();
@@ -35,8 +38,54 @@ pub async fn scrape_faculties() -> Vec<Faculty> {
     faculties
 }
 
-pub async fn scrape_groups() {
-    todo!()
+// Todo: add faculty info either as a part of a struct or using hal+json
+pub async fn scrape_groups(faculties_to_scrape: Vec<Faculty>) -> HashMap<Uuid, Vec<Group>> {
+    log::info!("Scraping groups for {faculties_to_scrape:?}");
+    let mut output = HashMap::new();
+    for faculty in faculties_to_scrape {
+        let mut payload = HashMap::new();
+        payload.insert("facultet", faculty.uuid.clone());
+        payload.insert("level", String::from(""));
+        payload.insert("action", String::from("filterData"));
+        let groups = match reqwest::Client::new()
+            .post("https://www.rudn.ru/api/v1/education/schedule")
+            .json(&payload)
+            .send()
+            .await
+        {
+            Ok(resp) => {
+                let parsed = json::parse(&resp.text().await.expect("There is no body"))
+                    .expect("Json error in response");
+                match &parsed["data"]["elements"]["group"]["list"] {
+                    json::JsonValue::Array(vec) => {
+                        let mut groups = vec![];
+                        for el in vec {
+                            let group = Group {
+                                uuid: el["value"].as_str().unwrap().to_string(),
+                                name: el["name"].as_str().unwrap().to_string(),
+                            };
+                            groups.push(group);
+                        }
+
+                        groups
+                    }
+                    t => {
+                        log::error!("Unexpected response format: {t:?}");
+                        vec![]
+                    }
+                }
+            }
+
+            Err(e) => {
+                log::error!("{e:?}");
+                vec![]
+            }
+        };
+
+        output.insert(faculty.uuid, groups);
+    }
+
+    output
 }
 
 pub async fn scrape_timetables() {

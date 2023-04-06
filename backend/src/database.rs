@@ -51,11 +51,17 @@ impl Database {
         }
     }
 
-    /// Returns all current faculties of the RUDN university,
+    /// Returns current faculties of the RUDN university based on selection parameter,
     /// or None if the database is empty or if there is an error
-    pub fn get_faculties(&mut self) -> Option<Vec<models::Faculty>> {
+    pub fn get_faculties(&mut self, selection: FacultiesSelection) -> Option<Vec<models::Faculty>> {
         use schema::faculties::dsl::*;
-        match faculties.load::<models::Faculty>(&mut self.conn) {
+        let query = match selection {
+            FacultiesSelection::Total => faculties.load::<models::Faculty>(&mut self.conn),
+            FacultiesSelection::Partial(selection) => faculties
+                .filter(uuid.eq_any(selection))
+                .load::<models::Faculty>(&mut self.conn),
+        };
+        match query {
             Ok(val) => {
                 if !val.is_empty() {
                     Some(val)
@@ -69,4 +75,9 @@ impl Database {
             }
         }
     }
+}
+
+pub enum FacultiesSelection<'a> {
+    Total,
+    Partial(&'a Vec<models::Uuid>),
 }
