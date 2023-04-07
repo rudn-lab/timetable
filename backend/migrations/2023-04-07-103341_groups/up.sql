@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS faculties (
+  uuid TEXT PRIMARY KEY NOT NULL, -- WTF SQLite
+  name TEXT NOT NUll UNIQUE
+);
+
+CREATE TABLE groups (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NUll UNIQUE,
+  faculty TEXT NOT NULL,
+  FOREIGN KEY(faculty) REFERENCES faculties (uuid)
+);

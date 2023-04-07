@@ -60,11 +60,12 @@ pub async fn get_groups(req: HttpRequest, db: web::Data<Arc<Mutex<Database>>>) -
                     req.headers().get("host").unwrap().to_str().unwrap()
                 ))
                 .await;
-                let mut db = db.lock().unwrap();
-                let faculties = db
-                    .get_faculties(FacultiesSelection::Partial(&params.faculties))
-                    .unwrap_or_default();
-                let result = scraping::scrape_groups(faculties).await;
+                let query_res = {
+                    let mut db = db.lock().unwrap();
+                    db.get_faculties(FacultiesSelection::Partial(&params.faculties))
+                        .unwrap_or_default()
+                };
+                let result = scraping::scrape_groups(query_res).await;
                 HttpResponse::Ok().body(serde_json::to_string(&result).unwrap_or_default())
             }
         }

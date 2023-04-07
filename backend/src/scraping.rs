@@ -63,6 +63,7 @@ pub async fn scrape_groups(faculties_to_scrape: Vec<Faculty>) -> HashMap<Uuid, V
                             let group = Group {
                                 uuid: el["value"].as_str().unwrap().to_string(),
                                 name: el["name"].as_str().unwrap().to_string(),
+                                faculty: faculty.uuid.clone(),
                             };
                             groups.push(group);
                         }
@@ -70,7 +71,7 @@ pub async fn scrape_groups(faculties_to_scrape: Vec<Faculty>) -> HashMap<Uuid, V
                         groups
                     }
                     t => {
-                        log::error!("Unexpected response format: {t:?}");
+                        log::error!("Unexpected group list format: {t:?}");
                         vec![]
                     }
                 }

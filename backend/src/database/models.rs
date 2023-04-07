@@ -15,4 +15,5 @@ pub struct Faculty {
 pub struct Group {
     pub uuid: Uuid,
     pub name: String,
+    pub faculty: Uuid,
 }
