@@ -16,21 +16,18 @@ use crate::{
 /// this method will _not_ scrape them back
 #[get("/faculties")]
 pub async fn get_faculties(db: web::Data<Arc<Mutex<Database>>>) -> impl Responder {
-    let query_res = {
+    let faculties = {
         let mut db = db.lock().unwrap();
-        db.get_faculties(FacultiesSelection::Total)
+        db.get_faculties()
     };
 
-    match query_res {
-        Some(faculties) => {
-            HttpResponse::Ok().body(serde_json::to_string(&faculties).unwrap_or_default())
-        }
-        None => {
-            let faculties = scraping::scrape_faculties().await;
-            let mut db = db.lock().unwrap();
-            db.update_faculties(&faculties);
-            HttpResponse::Ok().body(serde_json::to_string(&faculties).unwrap_or_default())
-        }
+    if !faculties.is_empty() {
+        HttpResponse::Ok().body(serde_json::to_string(&faculties).unwrap_or_default())
+    } else {
+        let faculties = scraping::scrape_faculties().await;
+        let mut db = db.lock().unwrap();
+        db.update_faculties(&faculties);
+        HttpResponse::Ok().body(serde_json::to_string(&faculties).unwrap_or_default())
     }
 }
 
@@ -43,31 +40,40 @@ struct Params {
 pub async fn get_groups(req: HttpRequest, db: web::Data<Arc<Mutex<Database>>>) -> impl Responder {
     match serde_qs::from_str::<Params>(req.query_string()) {
         Ok(params) => {
-            let query_res = {
+            let groups = {
                 let mut db = db.lock().unwrap();
-                db.get_faculties(FacultiesSelection::Partial(&params.faculties))
+                db.get_groups_by_faculty(&params.faculties)
             };
-
-            if let Some(faculties) = query_res {
-                let result = scraping::scrape_groups(faculties).await;
-                HttpResponse::Ok().body(serde_json::to_string(&result).unwrap_or_default())
-                // Todo: update the database
+            if !groups.is_empty() {
+                HttpResponse::Ok().body(serde_json::to_string(&groups).unwrap_or_default())
             } else {
-                // Update itself
-                let _ = reqwest::get(format!(
-                    "{}:{}/faculties",
-                    req.connection_info().scheme(),
-                    req.headers().get("host").unwrap().to_str().unwrap()
-                ))
-                .await;
-                let query_res = {
-                    let mut db = db.lock().unwrap();
-                    db.get_faculties(FacultiesSelection::Partial(&params.faculties))
-                        .unwrap_or_default()
+                let result = scraping::scrape_groups(&params.faculties).await;
+                let mut db = db.lock().unwrap();
+                match db.update_groups(
+                    &result
+                        .values()
+                        .flat_map(|el| el.clone())
+                        .collect::<Vec<_>>(),
+                ) {
+                    Ok(_) => {
+                        HttpResponse::Ok().body(serde_json::to_string(&result).unwrap_or_default())
+                    }
+                    Err(_) => todo!("Update faculties table and try insert again"),
                 };
-                let result = scraping::scrape_groups(query_res).await;
+
                 HttpResponse::Ok().body(serde_json::to_string(&result).unwrap_or_default())
             }
+            // // Todo: update the database
+
+            // // Trigger faculties db update on itself
+            // let _ = reqwest::get(format!(
+            //     "{}:{}/faculties",
+            //     req.connection_info().scheme(),
+            //     req.headers().get("host").unwrap().to_str().unwrap()
+            // ))
+            // .await;
+            // let result = scraping::scrape_groups(params.faculties).await;
+            // HttpResponse::Ok().body(serde_json::to_string(&result).unwrap_or_default())
         }
         Err(e) => {
             log::error!("{e:?}");
