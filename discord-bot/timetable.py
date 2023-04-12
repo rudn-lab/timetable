@@ -7,6 +7,8 @@ from datetime import time
 import typing
 import os
 
+_prev_input = dict()
+
 
 class Timetable(ui.Modal, title="New opening and closing times of the RUDN Lab"):
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
@@ -18,10 +20,12 @@ class Timetable(ui.Modal, title="New opening and closing times of the RUDN Lab")
     def __init__(self) -> None:
         super().__init__()
         for day in self.days:
+
             day_input = ui.TextInput(
                 label=day,
                 style=discord.TextStyle.short,
                 placeholder=self.time_format,
+                default=None if day not in _prev_input else _prev_input[day],
                 min_length=len(self.time_format),
                 max_length=len(self.time_format),
                 required=False,
@@ -48,6 +52,9 @@ class Timetable(ui.Modal, title="New opening and closing times of the RUDN Lab")
             text = str(text_input)
             if not text:
                 continue
+
+            # Save input to show it on new modal
+            _prev_input[day] = str(text_input)
 
             if self.time_regex.fullmatch(text):
                 split = text.split(" - ")
