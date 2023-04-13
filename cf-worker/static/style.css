@@ -2,6 +2,7 @@
   --row-height: 4rem;
   --column-min-width: 7rem;
   --time-periods: 8;
+  --time-margin: 60px;
 }
 
 .container {
@@ -12,6 +13,10 @@
 }
 
 .week-schedule {
+  margin-left: 60px;
+}
+
+.days {
   display: flex;
   position: relative;
   height: calc(var(--time-periods) * var(--row-height));
@@ -32,10 +37,12 @@
 .labels {
   display: flex;
   flex-direction: row;
+  margin-left: var(--time-margin);
 }
 
 .grid {
   position: relative;
+  margin-left: var(--time-margin);
 }
 
 .day {
@@ -45,6 +52,11 @@
   border: 0px solid;
   border-left-width: 1px;
   min-width: var(--column-min-width);
+}
+
+.day-label:last-child,
+.day:last-child {
+  border-right-width: 1px;
 }
 
 .events {
@@ -75,4 +87,21 @@
   box-sizing: border-box;
   border: 0px solid;
   border-bottom-width: 1px;
+}
+
+.grid-row:last-child {
+  border-bottom-width: 0;
+}
+
+.time-label {
+  display: inline-block;
+  position: absolute;
+  transform: translateY(-50%);
+  top: 0;
+  left: calc(-1 * var(--time-margin));
+}
+
+.time-label::after {
+  content: "";
+  position: absolute;
 }
