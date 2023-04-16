@@ -105,3 +105,57 @@
   content: "";
   position: absolute;
 }
+
+/* Mobile version */
+@media (max-width: 700px) {
+  .labels {
+    display: none;
+    margin-left: 0;
+  }
+
+  .mobile-day-label-li {
+    display: block !important;
+  }
+
+  .mobile-day-label {
+    background: red;
+  }
+
+  .grid {
+    margin-left: 0;
+  }
+
+  .days {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    height: 0;
+    /* z-index: 2; */
+  }
+
+  .schedule-grid {
+    display: none;
+  }
+
+  /* .day { */
+  /*   display: flex; */
+  /*   position: relative; */
+  /*    height: calc(var(--time-periods) * var(--row-height)); */
+  /*    z-index: 2; */
+  /* } */
+
+  .events {
+    padding-left: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .event {
+    /* display: inline-block !important; */
+    position: relative;
+    top: auto !important;
+    height: var(--row-height) !important;
+    width: 100%;
+  }
+}

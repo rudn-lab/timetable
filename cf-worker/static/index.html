@@ -24,6 +24,9 @@
           <!-- {{day}} -->
           <section class="day">
             <ul class="events">
+              <li class="mobile-day-label-li" style="display: none">
+                <div class="mobile-day-label">{{day}}</div>
+              </li>
               {% for event in Timetable[day]%}
               <li>
                 <div
