@@ -1,4 +1,5 @@
 :root {
+  --label-row-height: 2rem;
   --row-height: 4rem;
   --column-min-width: 7rem;
   --time-periods: 8;
@@ -19,7 +20,9 @@
 .days {
   display: flex;
   position: relative;
-  height: calc(var(--time-periods) * var(--row-height));
+  height: calc(
+    var(--time-periods) * var(--row-height) + var(--label-row-height)
+  );
   z-index: 2;
 }
 
@@ -27,17 +30,9 @@
   flex-grow: 1;
   flex-basis: 0;
   box-sizing: border-box;
-  border: 0px solid;
-  border-bottom-width: 1px;
-  border-left-width: 1px;
   min-width: var(--column-min-width);
   text-align: center;
-}
-
-.labels {
-  display: flex;
-  flex-direction: row;
-  margin-left: var(--time-margin);
+  height: var(--label-row-height);
 }
 
 .grid {
@@ -77,7 +72,7 @@
   display: block;
   left: 0;
   position: absolute;
-  top: 0;
+  top: var(--label-row-height);
   width: 100%;
 }
 
@@ -91,6 +86,10 @@
 
 .grid-row:last-child {
   border-bottom-width: 0;
+}
+
+.grid-row:first-child {
+  border-top-width: 1px;
 }
 
 .time-label {
@@ -113,14 +112,6 @@
     margin-left: 0;
   }
 
-  .mobile-day-label-li {
-    display: block !important;
-  }
-
-  .mobile-day-label {
-    background: red;
-  }
-
   .grid {
     margin-left: 0;
   }
@@ -137,12 +128,9 @@
     display: none;
   }
 
-  /* .day { */
-  /*   display: flex; */
-  /*   position: relative; */
-  /*    height: calc(var(--time-periods) * var(--row-height)); */
-  /*    z-index: 2; */
-  /* } */
+  .day {
+    border: 0px solid !important;
+  }
 
   .events {
     padding-left: 0;

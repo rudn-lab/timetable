@@ -1,7 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <title></title>
+    <!-- Google tag (gtag.js) -->
+    <script
+      async
+      src="https://www.googletagmanager.com/gtag/js?id=G-T3HDRXB9F4"
+    ></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+
+      gtag("config", "G-T3HDRXB9F4");
+    </script>
+
+    <title>RUDN Networking Lab Timetable</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link href="style.css" rel="stylesheet" />
@@ -9,24 +24,14 @@
 
   <body>
     <div class="container">
-      <div class="labels">
-        <div class="day-label">Monday</div>
-        <div class="day-label">Tuesday</div>
-        <div class="day-label">Wednesday</div>
-        <div class="day-label">Thursday</div>
-        <div class="day-label">Friday</div>
-        <div class="day-label">Saturday</div>
-      </div>
       <div class="grid">
         <div class="days">
           {% for day in [ "Monday", "Tuesday", "Wednesday", "Thursday",
           "Friday", "Saturday" ] %}
           <!-- {{day}} -->
           <section class="day">
+            <div class="day-label">{{day}}</div>
             <ul class="events">
-              <li class="mobile-day-label-li" style="display: none">
-                <div class="mobile-day-label">{{day}}</div>
-              </li>
               {% for event in Timetable[day]%}
               <li>
                 <div
