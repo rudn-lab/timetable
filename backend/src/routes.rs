@@ -24,10 +24,20 @@ pub async fn get_faculties(db: web::Data<Arc<Mutex<Database>>>) -> impl Responde
     if !faculties.is_empty() {
         HttpResponse::Ok().body(serde_json::to_string(&faculties).unwrap_or_default())
     } else {
-        let faculties = scraping::scrape_faculties().await;
-        let mut db = db.lock().unwrap();
-        db.update_faculties(&faculties);
-        HttpResponse::Ok().body(serde_json::to_string(&faculties).unwrap_or_default())
+        // If the database is empty, scrape the data
+        match scraping::scrape_faculties().await {
+            Some(faculties) => {
+                let mut db = db.lock().unwrap();
+                db.update_faculties(&faculties);
+                HttpResponse::Ok().body(serde_json::to_string(&faculties).unwrap_or_default())
+            }
+            None => HttpResponse::NonAuthoritativeInformation()
+                .insert_header((
+                    "Warning",
+                    "110 timetable-backend \"Could not ask RUDN web page\"",
+                ))
+                .finish(),
+        }
     }
 }
 
@@ -48,32 +58,32 @@ pub async fn get_groups(req: HttpRequest, db: web::Data<Arc<Mutex<Database>>>) -
                 HttpResponse::Ok().body(serde_json::to_string(&groups).unwrap_or_default())
             } else {
                 let result = scraping::scrape_groups(&params.faculties).await;
-                let mut db = db.lock().unwrap();
-                match db.update_groups(
-                    &result
-                        .values()
-                        .flat_map(|el| el.clone())
-                        .collect::<Vec<_>>(),
-                ) {
+                let groups_res = {
+                    let mut db = db.lock().unwrap();
+                    db.update_groups(
+                        &result
+                            .values()
+                            .flat_map(|el| el.clone())
+                            .collect::<Vec<_>>(),
+                    )
+                };
+                match groups_res {
                     Ok(_) => {
                         HttpResponse::Ok().body(serde_json::to_string(&result).unwrap_or_default())
                     }
-                    Err(_) => todo!("Update faculties table and try insert again"),
-                };
-
-                HttpResponse::Ok().body(serde_json::to_string(&result).unwrap_or_default())
+                    Err(_) => {
+                        // Trigger faculties db update on itself
+                        let _ = reqwest::get(format!(
+                            "{}:{}/faculties",
+                            req.connection_info().scheme(),
+                            req.headers().get("host").unwrap().to_str().unwrap()
+                        ))
+                        .await;
+                        let result = scraping::scrape_groups(&params.faculties).await;
+                        HttpResponse::Ok().body(serde_json::to_string(&result).unwrap_or_default())
+                    }
+                }
             }
-            // // Todo: update the database
-
-            // // Trigger faculties db update on itself
-            // let _ = reqwest::get(format!(
-            //     "{}:{}/faculties",
-            //     req.connection_info().scheme(),
-            //     req.headers().get("host").unwrap().to_str().unwrap()
-            // ))
-            // .await;
-            // let result = scraping::scrape_groups(params.faculties).await;
-            // HttpResponse::Ok().body(serde_json::to_string(&result).unwrap_or_default())
         }
         Err(e) => {
             log::error!("{e:?}");

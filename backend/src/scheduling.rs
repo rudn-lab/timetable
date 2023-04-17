@@ -11,13 +11,13 @@ pub fn schedule_scrape_faculties(timer: &DelayTimer, db: Arc<Mutex<Database>>) {
             TaskBuilder::default()
                 .set_frequency_repeated_by_cron_str("0 0 0 1 9 *")
                 .spawn_async_routine(move || {
-                    let db = db.clone();
+                    let _db = db.clone();
                     async move {
                         log::info!("Running cron job \"0 0 0 1 9 *\"");
                         log::info!("Scraping university faculties");
-                        let faculties = scraping::scrape_faculties().await;
-                        let mut db = db.lock().unwrap();
-                        db.update_faculties(&faculties);
+                        // let faculties = scraping::scrape_faculties().await;
+                        // let mut db = db.lock().unwrap();
+                        // db.update_faculties(&faculties);
                     }
                 })
                 .unwrap(),
