@@ -35,8 +35,11 @@ async fn load_timetable(kv: &KvStore) -> Timetable {
                 ((time - *FIRST_CLASS_START).num_minutes() as f64)
                     / (CLASS_DURATION.num_minutes() as f64)
             };
-            let class_start_offset = calc_time_offset(lab_time[0]);
-            let class_duration = calc_time_offset(lab_time[1]) - class_start_offset;
+            // Clamp all values, allow small space when the time is strange
+            let class_start_offset = calc_time_offset(lab_time[0]).clamp(0.0, 7.25);
+            let class_duration = (calc_time_offset(lab_time[1]).clamp(0.0, 8.0)
+                - class_start_offset)
+                .clamp(0.75, 8.0);
 
             let event = Event {
                 name: String::from("Lab"),
