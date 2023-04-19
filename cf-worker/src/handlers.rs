@@ -42,6 +42,8 @@ async fn load_timetable(kv: &KvStore) -> Timetable {
                 name: String::from("Lab"),
                 start_offset: class_start_offset,
                 duration: class_duration,
+                start_time: lab_time[0],
+                end_time: lab_time[1],
             };
 
             tt.insert(day, vec![event]);

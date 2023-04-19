@@ -1,81 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <!-- Google tag (gtag.js) -->
-    <script
-      async
-      src="https://www.googletagmanager.com/gtag/js?id=G-T3HDRXB9F4"
-    ></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag() {
-        dataLayer.push(arguments);
-      }
-      gtag("js", new Date());
 
-      gtag("config", "G-T3HDRXB9F4");
-    </script>
+<head>
+  <title>Robotics and AI Timetable</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="style.css" rel="stylesheet" />
+</head>
 
-    <title>RUDN Networking Lab Timetable</title>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link href="style.css" rel="stylesheet" />
-  </head>
-
-  <body>
-    <div class="container">
-      <div class="grid">
-        <div class="days">
-          {% for day in [ "Monday", "Tuesday", "Wednesday", "Thursday",
-          "Friday", "Saturday" ] %}
-          <!-- {{day}} -->
-          <section class="day">
-            <div class="day-label">{{day}}</div>
-            <ul class="events">
-              {% for event in Timetable[day]%}
-              <li>
-                <div
-                  class="event"
-                  style="top: calc(var(--row-height) * {{event.start_offset}}); height: calc(var(--row-height) * {{event.duration}})"
-                >
-                  {{event.name}}
+<body>
+  <h1>Robotics and AI Timetable</h1>
+  <div class="container">
+    <div class="grid">
+      <div class="days">
+        {% for day in [ "Monday", "Tuesday", "Wednesday", "Thursday",
+        "Friday", "Saturday" ] %}
+        <!-- {{day}} -->
+        <section class="day">
+          <div class="day-label">{{day}}</div>
+          <ul class="events">
+            <li class="empty-event-li">
+              <div class="event">
+                <div>
+                  <h3>Nothing today</h3>
+                  <p>You are free, yaaay!</p>
                 </div>
-              </li>
-              {% endfor %}
-            </ul>
-          </section>
-          {% endfor %}
+              </div>
+            </li>
+            {% for event in Timetable[day]%}
+            <li>
+              <div class="event"
+                style="top: calc(var(--row-height) * {{event.start_offset}}); height: calc(var(--row-height) * {{event.duration}})">
+                <div>
+                  <h3>{{event.name}}</h3>
+                  <p>{{event.start_time}} - {{event.end_time}}</p>
+                </div>
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+        </section>
+        {% endfor %}
+      </div>
+      <div class="schedule-grid" aria-hidden="true">
+        <div class="grid-row">
+          <span class="time-label">9:00</span>
         </div>
-        <div class="schedule-grid" aria-hidden="true">
-          <div class="grid-row">
-            <span class="time-label">9:00</span>
-          </div>
-          <div class="grid-row">
-            <span class="time-label">10:30</span>
-          </div>
-          <div class="grid-row">
-            <span class="time-label">12:00</span>
-          </div>
-          <div class="grid-row">
-            <span class="time-label">13:30</span>
-          </div>
-          <div class="grid-row">
-            <span class="time-label">15:00</span>
-          </div>
-          <div class="grid-row">
-            <span class="time-label">16:30</span>
-          </div>
-          <div class="grid-row">
-            <span class="time-label">18:00</span>
-          </div>
-          <div class="grid-row">
-            <span class="time-label">19:30</span>
-          </div>
-          <div class="grid-row">
-            <span class="time-label">21:00</span>
-          </div>
+        <div class="grid-row">
+          <span class="time-label">10:30</span>
+        </div>
+        <div class="grid-row">
+          <span class="time-label">12:00</span>
+        </div>
+        <div class="grid-row">
+          <span class="time-label">13:30</span>
+        </div>
+        <div class="grid-row">
+          <span class="time-label">15:00</span>
+        </div>
+        <div class="grid-row">
+          <span class="time-label">16:30</span>
+        </div>
+        <div class="grid-row">
+          <span class="time-label">18:00</span>
+        </div>
+        <div class="grid-row">
+          <span class="time-label">19:30</span>
+        </div>
+        <div class="grid-row">
+          <span class="time-label">21:00</span>
         </div>
       </div>
     </div>
-  </body>
+  </div>
+</body>
+
 </html>
