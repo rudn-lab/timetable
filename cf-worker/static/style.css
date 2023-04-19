@@ -1,7 +1,7 @@
 :root {
   --label-row-height: 2rem;
   --row-height: 80px;
-  --container-max-width: 7000px;
+  --container-max-width: 1100px;
   --column-min-width: 150px;
   --time-periods: 8;
   --time-margin: 60px;
