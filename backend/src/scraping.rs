@@ -3,26 +3,23 @@ use std::collections::HashMap;
 use crate::database::models::*;
 use scraper::{Html, Selector};
 
-pub async fn scrape_faculties() -> Vec<Faculty> {
+pub async fn scrape_faculties() -> Option<Vec<Faculty>> {
     log::info!("Scraping faculties");
     let response = reqwest::get("https://www.rudn.ru/education/schedule")
         .await
-        .unwrap()
+        .ok()?
         .text()
         .await
-        .unwrap();
+        .ok()?;
 
     let document = Html::parse_document(&response);
 
     // Select 'select' element for faculties
-    let faculty_select_element_selector = Selector::parse(r#"select[name="facultet"]"#).unwrap();
-    let faculty_select_element = document
-        .select(&faculty_select_element_selector)
-        .next()
-        .unwrap();
+    let faculty_select_element_selector = Selector::parse(r#"select[name="facultet"]"#).ok()?;
+    let faculty_select_element = document.select(&faculty_select_element_selector).next()?;
 
     let faculties: Vec<Faculty> = faculty_select_element
-        .select(&Selector::parse("option").unwrap())
+        .select(&Selector::parse("option").ok()?)
         .skip(1) // Skip the first element because it is a default option
         .map(|el| {
             let name = el.text().next().unwrap().trim();
@@ -35,16 +32,15 @@ pub async fn scrape_faculties() -> Vec<Faculty> {
         })
         .collect();
 
-    faculties
+    Some(faculties)
 }
 
-// Todo: add faculty info either as a part of a struct or using hal+json
-pub async fn scrape_groups(faculties_to_scrape: Vec<Faculty>) -> HashMap<Uuid, Vec<Group>> {
-    log::info!("Scraping groups for {faculties_to_scrape:?}");
+pub async fn scrape_groups(faculties_uuid: &Vec<Uuid>) -> HashMap<Uuid, Vec<Group>> {
+    log::info!("Scraping groups for {faculties_uuid:?}");
     let mut output = HashMap::new();
-    for faculty in faculties_to_scrape {
+    for uuid in faculties_uuid {
         let mut payload = HashMap::new();
-        payload.insert("facultet", faculty.uuid.clone());
+        payload.insert("facultet", uuid.clone());
         payload.insert("level", String::from(""));
         payload.insert("action", String::from("filterData"));
         let groups = match reqwest::Client::new()
@@ -63,7 +59,7 @@ pub async fn scrape_groups(faculties_to_scrape: Vec<Faculty>) -> HashMap<Uuid, V
                             let group = Group {
                                 uuid: el["value"].as_str().unwrap().to_string(),
                                 name: el["name"].as_str().unwrap().to_string(),
-                                faculty: faculty.uuid.clone(),
+                                faculty: uuid.clone(),
                             };
                             groups.push(group);
                         }
@@ -83,12 +79,12 @@ pub async fn scrape_groups(faculties_to_scrape: Vec<Faculty>) -> HashMap<Uuid, V
             }
         };
 
-        output.insert(faculty.uuid, groups);
+        output.insert(uuid.clone(), groups);
     }
 
     output
 }
 
-pub async fn scrape_timetables() {
+pub async fn scrape_timetables() -> Option<String> {
     todo!()
 }

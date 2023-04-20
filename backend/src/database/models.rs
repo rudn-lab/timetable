@@ -1,4 +1,4 @@
-use crate::database::schema::faculties;
+use crate::database::schema::*;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -11,7 +11,8 @@ pub struct Faculty {
     pub name: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Queryable, Insertable, Clone, Debug, Serialize, Deserialize)]
+#[diesel(table_name = groups)]
 pub struct Group {
     pub uuid: Uuid,
     pub name: String,

@@ -1,11 +1,52 @@
+use diesel::connection::DefaultLoadingMode;
 use diesel::prelude::*;
 use diesel::result::{DatabaseErrorKind, Error::DatabaseError};
 use diesel::sqlite::SqliteConnection;
 use dotenvy::dotenv;
+use std::collections::HashMap;
 use std::env;
 
 pub mod models;
+use models::*;
 pub mod schema;
+
+pub enum DBError {
+    ForeignKeyError,
+}
+
+/// Insert elements one by one so that if there's a new one at the end of the list it
+/// will be added even if all previous throw UniqueViolation errors
+// Todo: this is kida scuffed, find a better way
+macro_rules! update_table {
+    ($conn:expr, $table:expr, $aggregate:expr) => {{
+        let mut res = Ok(());
+        for entry in $aggregate {
+            match diesel::insert_into($table).values(entry).execute($conn) {
+                // Todo: find a way to set table name in logs
+                Ok(_) => log::info!("Added new entry '{:?}' into table '{:?}'", entry, $table),
+                Err(DatabaseError(DatabaseErrorKind::UniqueViolation, _)) => {
+                    log::warn!(
+                        "Skipping: entry '{:?}' already exists in table '{:?}'",
+                        entry,
+                        $table
+                    )
+                }
+                Err(DatabaseError(DatabaseErrorKind::ForeignKeyViolation, info)) => {
+                    log::error!("{info:?}");
+                    res = Err(DBError::ForeignKeyError);
+                    break;
+                }
+                Err(msg) => log::error!(
+                    "Error: '{}' while inserting entry '{:?}' into table '{:?}'",
+                    msg,
+                    entry,
+                    $table
+                ),
+            }
+        }
+        res
+    }};
+}
 
 pub struct Database {
     pub conn: SqliteConnection,
@@ -16,68 +57,49 @@ impl Database {
         dotenv().ok();
 
         let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-        let conn = SqliteConnection::establish(&database_url)
+        let mut conn = SqliteConnection::establish(&database_url)
             .unwrap_or_else(|_| panic!("Error connecting to {database_url}"));
+        match diesel::sql_query("PRAGMA foreign_keys = ON").execute(&mut conn) {
+            Ok(_) => log::info!("Activated foreign keys in database"),
+            Err(e) => {
+                log::error!("Could not activate foreigh keys in database: '{e}'")
+            }
+        };
         Self { conn }
     }
 
-    pub fn update_faculties(&mut self, faculties: &Vec<models::Faculty>) {
-        // Insert faculties one by one so that if there's a new faculty at the end of the list it
-        // will be added even if all previous throw UniqueViolation errors
-        for faculty in faculties {
-            match diesel::insert_into(schema::faculties::table)
-                .values(faculty)
-                .execute(&mut self.conn)
-            {
-                Ok(_) => log::info!(
-                    "Added new Faculty '{}' with uuid: '{}'",
-                    faculty.name,
-                    faculty.uuid,
-                ),
-                Err(DatabaseError(DatabaseErrorKind::UniqueViolation, _)) => {
-                    log::info!(
-                        "Faculty '{}' with uuid '{}' already exists in the database",
-                        faculty.name,
-                        faculty.uuid
-                    )
-                }
-                Err(msg) => log::error!(
-                    "Error: '{}' while inserting faculty '{}' with uuid: '{}'",
-                    msg,
-                    faculty.name,
-                    faculty.uuid
-                ),
-            }
-        }
+    pub fn update_faculties(&mut self, new_faculties: &Vec<Faculty>) {
+        let _: Result<(), DBError> =
+            update_table!(&mut self.conn, schema::faculties::table, new_faculties);
     }
 
-    /// Returns current faculties of the RUDN university based on selection parameter,
-    /// or None if the database is empty or if there is an error
-    pub fn get_faculties(&mut self, selection: FacultiesSelection) -> Option<Vec<models::Faculty>> {
+    /// Returns all current faculties of the RUDN university
+    /// If the vector is empty, something is wrong with the database
+    pub fn get_faculties(&mut self) -> Vec<Faculty> {
         use schema::faculties::dsl::*;
-        let query = match selection {
-            FacultiesSelection::Total => faculties.load::<models::Faculty>(&mut self.conn),
-            FacultiesSelection::Partial(selection) => faculties
-                .filter(uuid.eq_any(selection))
-                .load::<models::Faculty>(&mut self.conn),
-        };
-        match query {
-            Ok(val) => {
-                if !val.is_empty() {
-                    Some(val)
-                } else {
-                    None
-                }
-            }
-            Err(err) => {
-                log::error!("{err}");
-                None
+        faculties.load::<Faculty>(&mut self.conn).unwrap_or(vec![])
+    }
+
+    pub fn update_groups(&mut self, new_groups: &Vec<Group>) -> Result<(), DBError> {
+        update_table!(&mut self.conn, schema::groups::table, new_groups)
+    }
+
+    pub fn get_groups_by_faculty(&mut self, faculties: &Vec<Uuid>) -> HashMap<Uuid, Group> {
+        use schema::groups::dsl::*;
+        match groups
+            .filter(faculty.eq_any(faculties))
+            .load_iter::<Group, DefaultLoadingMode>(&mut self.conn)
+        {
+            Ok(query_res) => query_res
+                .map(|el| {
+                    let el = el.unwrap();
+                    (el.faculty.clone(), el)
+                })
+                .collect::<HashMap<Uuid, Group>>(),
+            Err(e) => {
+                log::error!("{e:?}");
+                HashMap::new()
             }
         }
     }
-}
-
-pub enum FacultiesSelection<'a> {
-    Total,
-    Partial(&'a Vec<models::Uuid>),
 }
