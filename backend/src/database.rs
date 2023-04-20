@@ -16,6 +16,7 @@ pub enum DBError {
 
 /// Insert elements one by one so that if there's a new one at the end of the list it
 /// will be added even if all previous throw UniqueViolation errors
+// Todo: this is kida scuffed, find a better way
 macro_rules! update_table {
     ($conn:expr, $table:expr, $aggregate:expr) => {{
         let mut res = Ok(());

@@ -14,6 +14,11 @@ use crate::{
 /// if there is no faculties stored it scrapes info from the web and returns that.
 /// However, if some but not all faculties were deleted from the database
 /// this method will _not_ scrape them back
+///
+/// # Implementation
+/// 1. Return faculties if we have them in the DB
+/// 2. If we have none, ask the timetable website and update DB;
+/// 3. Return data
 #[get("/faculties")]
 pub async fn get_faculties(db: web::Data<Arc<Mutex<Database>>>) -> impl Responder {
     let faculties = {
@@ -46,10 +51,20 @@ struct Params {
     faculties: Vec<Uuid>,
 }
 
+/// This route returns all student groups for given faculties
+/// Accepts a query string with `faculties[]` as parameter;
+/// several may be supplied `/groups?faculties?[]=<faculty-uuid-1>&faculties[]=<faculty-uuid-2>`
+///
+/// # Implementation
+/// 1. If we have the data already, just return them
+/// 2. If we have the faculties, scrape group data from the timetable website; update DB and
+///    return new data
+/// 3. If we do not have faculties, scrape them; scrape groups; update DB and return data
 #[get("/groups")]
 pub async fn get_groups(req: HttpRequest, db: web::Data<Arc<Mutex<Database>>>) -> impl Responder {
     match serde_qs::from_str::<Params>(req.query_string()) {
         Ok(params) => {
+            // Get groups from DB
             let groups = {
                 let mut db = db.lock().unwrap();
                 db.get_groups_by_faculty(&params.faculties)
@@ -57,21 +72,27 @@ pub async fn get_groups(req: HttpRequest, db: web::Data<Arc<Mutex<Database>>>) -
             if !groups.is_empty() {
                 HttpResponse::Ok().body(serde_json::to_string(&groups).unwrap_or_default())
             } else {
-                let result = scraping::scrape_groups(&params.faculties).await;
-                let groups_res = {
+                // We do not have group data in DB, scrape anew
+                let scraped_groups = scraping::scrape_groups(&params.faculties).await;
+
+                // Make into a closure, to later reuse
+                let update_groups = || {
                     let mut db = db.lock().unwrap();
                     db.update_groups(
-                        &result
+                        &scraped_groups
                             .values()
                             .flat_map(|el| el.clone())
                             .collect::<Vec<_>>(),
                     )
                 };
+                let groups_res = update_groups();
                 match groups_res {
-                    Ok(_) => {
-                        HttpResponse::Ok().body(serde_json::to_string(&result).unwrap_or_default())
-                    }
+                    Ok(_) => HttpResponse::Ok()
+                        .body(serde_json::to_string(&scraped_groups).unwrap_or_default()),
                     Err(_) => {
+                        // Something is wrong with faculties table
+                        // Update it and
+
                         // Trigger faculties db update on itself
                         let _ = reqwest::get(format!(
                             "{}:{}/faculties",
@@ -79,8 +100,11 @@ pub async fn get_groups(req: HttpRequest, db: web::Data<Arc<Mutex<Database>>>) -
                             req.headers().get("host").unwrap().to_str().unwrap()
                         ))
                         .await;
-                        let result = scraping::scrape_groups(&params.faculties).await;
-                        HttpResponse::Ok().body(serde_json::to_string(&result).unwrap_or_default())
+
+                        // Update DB
+                        let _ = update_groups();
+                        HttpResponse::Ok()
+                            .body(serde_json::to_string(&scraped_groups).unwrap_or_default())
                     }
                 }
             }

@@ -35,8 +35,7 @@ pub async fn scrape_faculties() -> Option<Vec<Faculty>> {
     Some(faculties)
 }
 
-// Todo: return None somehow
-pub async fn scrape_groups(faculties_uuid: &Vec<Uuid>) -> Option<HashMap<Uuid, Vec<Group>>> {
+pub async fn scrape_groups(faculties_uuid: &Vec<Uuid>) -> HashMap<Uuid, Vec<Group>> {
     log::info!("Scraping groups for {faculties_uuid:?}");
     let mut output = HashMap::new();
     for uuid in faculties_uuid {
@@ -83,9 +82,9 @@ pub async fn scrape_groups(faculties_uuid: &Vec<Uuid>) -> Option<HashMap<Uuid, V
         output.insert(uuid.clone(), groups);
     }
 
-    Some(output)
+    output
 }
 
-pub async fn scrape_timetables() {
+pub async fn scrape_timetables() -> Option<String> {
     todo!()
 }

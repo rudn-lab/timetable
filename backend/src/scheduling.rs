@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use delay_timer::prelude::*;
 
-use crate::{database::Database, scraping};
+use crate::database::Database;
 
 /// Get all university faculties cron job, runs every 1 September
 pub fn schedule_scrape_faculties(timer: &DelayTimer, db: Arc<Mutex<Database>>) {
