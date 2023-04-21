@@ -1,78 +1,93 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <title>Robotics and AI Timetable</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="style.css" rel="stylesheet" />
+  </head>
 
-<head>
-  <title>Robotics and AI Timetable</title>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link href="style.css" rel="stylesheet" />
-</head>
-
-<body>
-  <h1>Robotics and AI Timetable</h1>
-  <div class="container">
-    <div class="grid">
-      <div class="days">
-        {% for day in [ "Monday", "Tuesday", "Wednesday", "Thursday",
-        "Friday", "Saturday" ] %}
-        <!-- {{day}} -->
-        <section class="day">
-          <div class="day-label">{{day}}</div>
-          <ul class="events">
-            <li class="empty-event-li">
-              <div class="event">
-                <div>
-                  <h3>Nothing today</h3>
-                  <p>You are free, yaaay!</p>
+  <body>
+    <!-- Prevent FOUC -->
+    <script>
+      0;
+    </script>
+    <div class="container">
+      <h1>Robotics and AI Lab Timetable</h1>
+      <div class="grid">
+        <div class="days">
+          {% for day in [ "Monday", "Tuesday", "Wednesday", "Thursday",
+          "Friday", "Saturday" ] %}
+          <!-- {{day}} -->
+          <section class="day">
+            <div class="day-label">{{day}}</div>
+            <ul class="events">
+              <li class="empty-event-li">
+                <div class="event">
+                  <div>
+                    <h3>Nothing today</h3>
+                    <p>You are free, yaaay!</p>
+                  </div>
                 </div>
-              </div>
-            </li>
-            {% for event in Timetable[day]%}
-            <li>
-              <div class="event"
-                style="top: calc(var(--row-height) * {{event.start_offset}}); height: calc(var(--row-height) * {{event.duration}})">
-                <div>
-                  <h3>{{event.name}}</h3>
-                  <p>{{event.start_time}} - {{event.end_time}}</p>
+              </li>
+              {% for event in Timetable[day]%}
+              <li>
+                <div
+                  class="event"
+                  style="top: calc(var(--row-height) * {{event.start_offset}}); height: calc(var(--row-height) * {{event.duration}})"
+                >
+                  <div>
+                    <h3>{{event.name}}</h3>
+                    <p>{{event.start_time}} - {{event.end_time}}</p>
+                  </div>
                 </div>
-              </div>
-            </li>
-            {% endfor %}
-          </ul>
-        </section>
-        {% endfor %}
-      </div>
-      <div class="schedule-grid" aria-hidden="true">
-        <div class="grid-row">
-          <span class="time-label">9:00</span>
+              </li>
+              {% endfor %}
+            </ul>
+          </section>
+          {% endfor %}
         </div>
-        <div class="grid-row">
-          <span class="time-label">10:30</span>
-        </div>
-        <div class="grid-row">
-          <span class="time-label">12:00</span>
-        </div>
-        <div class="grid-row">
-          <span class="time-label">13:30</span>
-        </div>
-        <div class="grid-row">
-          <span class="time-label">15:00</span>
-        </div>
-        <div class="grid-row">
-          <span class="time-label">16:30</span>
-        </div>
-        <div class="grid-row">
-          <span class="time-label">18:00</span>
-        </div>
-        <div class="grid-row">
-          <span class="time-label">19:30</span>
-        </div>
-        <div class="grid-row">
-          <span class="time-label">21:00</span>
+        <div class="schedule-grid" aria-hidden="true">
+          <div class="grid-row">
+            <span class="time-label">9:00</span>
+          </div>
+          <div class="grid-row">
+            <span class="time-label">10:30</span>
+          </div>
+          <div class="grid-row">
+            <span class="time-label">12:00</span>
+          </div>
+          <div class="grid-row">
+            <span class="time-label">13:30</span>
+          </div>
+          <div class="grid-row">
+            <span class="time-label">15:00</span>
+          </div>
+          <div class="grid-row">
+            <span class="time-label">16:30</span>
+          </div>
+          <div class="grid-row">
+            <span class="time-label">18:00</span>
+          </div>
+          <div class="grid-row">
+            <span class="time-label">19:30</span>
+          </div>
+          <div class="grid-row">
+            <span class="time-label">21:00</span>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-</body>
 
+    <!-- Shynet Analytics -->
+    <noscript>
+      <img
+        src="https://shynet.rudn-lab.ru/ingress/7df799c6-1462-4037-984d-72cc111a9139/pixel.gif"
+      />
+    </noscript>
+    <script
+      defer
+      src="https://shynet.rudn-lab.ru/ingress/7df799c6-1462-4037-984d-72cc111a9139/script.js"
+    ></script>
+  </body>
 </html>
