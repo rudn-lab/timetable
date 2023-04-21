@@ -47,7 +47,7 @@ pub async fn get_faculties(db: web::Data<Arc<Mutex<Database>>>) -> impl Responde
 }
 
 #[derive(Debug, Deserialize)]
-struct Params {
+struct GroupsParams {
     faculties: Vec<Uuid>,
 }
 
@@ -62,7 +62,7 @@ struct Params {
 /// 3. If we do not have faculties, scrape them; scrape groups; update DB and return data
 #[get("/groups")]
 pub async fn get_groups(req: HttpRequest, db: web::Data<Arc<Mutex<Database>>>) -> impl Responder {
-    match serde_qs::from_str::<Params>(req.query_string()) {
+    match serde_qs::from_str::<GroupsParams>(req.query_string()) {
         Ok(params) => {
             // Get groups from DB
             let groups = {
@@ -116,8 +116,27 @@ pub async fn get_groups(req: HttpRequest, db: web::Data<Arc<Mutex<Database>>>) -
     }
 }
 
-#[get("/timetables")]
-pub async fn get_timetables(_db: web::Data<Arc<Mutex<Database>>>) -> impl Responder {
-    scraping::scrape_timetables().await;
-    HttpResponse::Accepted().finish()
+#[derive(Debug, Deserialize)]
+struct TimetableParams {
+    faculty: Uuid,
+    group: Uuid,
+}
+
+#[get("/timetable")]
+pub async fn get_timetable(
+    req: HttpRequest,
+    _db: web::Data<Arc<Mutex<Database>>>,
+) -> impl Responder {
+    match serde_qs::from_str::<TimetableParams>(req.query_string()) {
+        Ok(params) => match scraping::scrape_timetable(params.faculty, params.group).await {
+            Ok(classes) => {
+                HttpResponse::Ok().body(serde_json::to_string(&classes).unwrap_or_default())
+            }
+            Err(_) => HttpResponse::InternalServerError().finish(),
+        },
+        Err(e) => {
+            log::error!("{e:?}");
+            HttpResponse::BadRequest().body("Invalid url query")
+        }
+    }
 }

@@ -34,7 +34,7 @@ async fn run_server(
             .service(services![
                 routes::get_faculties,
                 routes::get_groups,
-                routes::get_timetables
+                routes::get_timetable
             ])
     })
     .bind((ip, port))?
