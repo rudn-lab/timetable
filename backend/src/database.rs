@@ -84,18 +84,21 @@ impl Database {
         update_table!(&mut self.conn, schema::groups::table, new_groups)
     }
 
-    pub fn get_groups_by_faculty(&mut self, faculties: &Vec<Uuid>) -> HashMap<Uuid, Group> {
+    pub fn get_groups_by_faculty(&mut self, faculties: &Vec<Uuid>) -> HashMap<Uuid, Vec<Group>> {
         use schema::groups::dsl::*;
         match groups
             .filter(faculty.eq_any(faculties))
             .load_iter::<Group, DefaultLoadingMode>(&mut self.conn)
         {
-            Ok(query_res) => query_res
-                .map(|el| {
+            Ok(query_res) => {
+                query_res.fold(HashMap::new(), |mut map: HashMap<Uuid, Vec<Group>>, el| {
                     let el = el.unwrap();
-                    (el.faculty.clone(), el)
+                    map.entry(el.faculty.clone())
+                        .and_modify(|grps| grps.push(el.clone()))
+                        .or_insert_with(|| vec![el]);
+                    map
                 })
-                .collect::<HashMap<Uuid, Group>>(),
+            }
             Err(e) => {
                 log::error!("{e:?}");
                 HashMap::new()
