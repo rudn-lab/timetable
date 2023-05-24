@@ -83,17 +83,6 @@ impl Database {
         faculties.load::<Faculty>(&mut self.conn).ok()
     }
 
-    pub fn get_faculty_for_group(&mut self, group_uuid: &Uuid) -> Option<Uuid> {
-        use schema::groups::dsl::*;
-        let row = groups
-            .filter(uuid.eq(group_uuid))
-            .limit(1)
-            .select(faculty)
-            .load::<String>(&mut self.conn)
-            .ok()?;
-        Some(row[0].clone())
-    }
-
     pub fn update_groups(&mut self, new_groups: &Vec<Group>) -> Result<(), DBError> {
         update_table!(&mut self.conn, schema::groups::table, new_groups)
     }

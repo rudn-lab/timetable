@@ -36,10 +36,10 @@ pub async fn scrape_faculties() -> Option<Vec<Faculty>> {
     Some(faculties)
 }
 
-pub async fn scrape_group(facultie_uuid: &Uuid) -> Option<Vec<Group>> {
-    log::info!("Scraping groups for facultie: {facultie_uuid:?}");
+pub async fn scrape_group(faculty_uuid: &Uuid) -> Option<Vec<Group>> {
+    log::info!("Scraping groups for faculty: {faculty_uuid:?}");
     let mut payload = HashMap::new();
-    payload.insert("facultet", facultie_uuid.clone());
+    payload.insert("facultet", faculty_uuid.clone());
     payload.insert("level", String::from(""));
     payload.insert("action", String::from("filterData"));
 
@@ -61,7 +61,7 @@ pub async fn scrape_group(facultie_uuid: &Uuid) -> Option<Vec<Group>> {
                         let group = Group {
                             uuid: el["value"].as_str().unwrap().to_string(),
                             name: el["name"].as_str().unwrap().to_string(),
-                            faculty: facultie_uuid.clone(),
+                            faculty: faculty_uuid.clone(),
                         };
                         groups.push(group);
                     }
