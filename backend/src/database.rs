@@ -26,9 +26,9 @@ macro_rules! update_table {
                 .execute($conn)
             {
                 // Todo: find a way to set table name in logs
-                Ok(_) => log::info!("Added new entry '{:?}' into table '{:?}'", entry, $table),
+                Ok(_) => log::debug!("Added new entry '{:?}' into table '{:?}'", entry, $table),
                 Err(DatabaseError(DatabaseErrorKind::UniqueViolation, _)) => {
-                    log::warn!(
+                    log::debug!(
                         "Skipping: entry '{:?}' already exists in table '{:?}'",
                         entry,
                         $table
@@ -78,19 +78,30 @@ impl Database {
 
     /// Returns all current faculties of the RUDN university
     /// If the vector is empty, something is wrong with the database
-    pub fn get_faculties(&mut self) -> Vec<Faculty> {
+    pub fn get_faculties(&mut self) -> Option<Vec<Faculty>> {
         use schema::faculties::dsl::*;
-        faculties.load::<Faculty>(&mut self.conn).unwrap_or(vec![])
+        faculties.load::<Faculty>(&mut self.conn).ok()
+    }
+
+    pub fn get_faculty_for_group(&mut self, group_uuid: &Uuid) -> Option<Uuid> {
+        use schema::groups::dsl::*;
+        let row = groups
+            .filter(uuid.eq(group_uuid))
+            .limit(1)
+            .select(faculty)
+            .load::<String>(&mut self.conn)
+            .ok()?;
+        Some(row[0].clone())
     }
 
     pub fn update_groups(&mut self, new_groups: &Vec<Group>) -> Result<(), DBError> {
         update_table!(&mut self.conn, schema::groups::table, new_groups)
     }
 
-    pub fn get_groups_by_faculty(&mut self, faculties: &Vec<Uuid>) -> HashMap<Uuid, Vec<Group>> {
+    pub fn get_groups_by_faculty(&mut self, faculties: &Uuid) -> HashMap<Uuid, Vec<Group>> {
         use schema::groups::dsl::*;
         match groups
-            .filter(faculty.eq_any(faculties))
+            .filter(faculty.eq(faculties))
             .load_iter::<Group, DefaultLoadingMode>(&mut self.conn)
         {
             Ok(query_res) => {

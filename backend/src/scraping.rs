@@ -36,63 +36,68 @@ pub async fn scrape_faculties() -> Option<Vec<Faculty>> {
     Some(faculties)
 }
 
-pub async fn scrape_groups(faculties_uuid: &Vec<Uuid>) -> HashMap<Uuid, Vec<Group>> {
-    log::info!("Scraping groups for {faculties_uuid:?}");
-    let mut output = HashMap::new();
-    for uuid in faculties_uuid {
-        let mut payload = HashMap::new();
-        payload.insert("facultet", uuid.clone());
-        payload.insert("level", String::from(""));
-        payload.insert("action", String::from("filterData"));
-        let groups = match reqwest::Client::new()
-            .post("https://www.rudn.ru/api/v1/education/schedule")
-            .json(&payload)
-            .send()
-            .await
-        {
-            Ok(resp) => {
-                let parsed = json::parse(&resp.text().await.expect("There is no body"))
-                    .expect("Json error in response");
-                match &parsed["data"]["elements"]["group"]["list"] {
-                    json::JsonValue::Array(vec) => {
-                        let mut groups = vec![];
-                        for el in vec {
-                            let group = Group {
-                                uuid: el["value"].as_str().unwrap().to_string(),
-                                name: el["name"].as_str().unwrap().to_string(),
-                                faculty: uuid.clone(),
-                            };
-                            groups.push(group);
-                        }
+pub async fn scrape_group(facultie_uuid: &Uuid) -> Option<Vec<Group>> {
+    log::info!("Scraping groups for facultie: {facultie_uuid:?}");
+    let mut payload = HashMap::new();
+    payload.insert("facultet", facultie_uuid.clone());
+    payload.insert("level", String::from(""));
+    payload.insert("action", String::from("filterData"));
 
-                        groups
+    let groups = match reqwest::Client::new()
+        .post("https://www.rudn.ru/api/v1/education/schedule")
+        .json(&payload)
+        .send()
+        .await
+    {
+        Ok(resp) => {
+            let parsed = json::parse(&resp.text().await.unwrap())
+                .map_err(|e| log::error!("Error while parsing json response: {e:?}"))
+                .ok()?;
+
+            match &parsed["data"]["elements"]["group"]["list"] {
+                json::JsonValue::Array(vec) => {
+                    let mut groups = vec![];
+                    for el in vec {
+                        let group = Group {
+                            uuid: el["value"].as_str().unwrap().to_string(),
+                            name: el["name"].as_str().unwrap().to_string(),
+                            faculty: facultie_uuid.clone(),
+                        };
+                        groups.push(group);
                     }
-                    t => {
-                        log::error!("Unexpected group list format: {t:?}");
-                        vec![]
-                    }
+
+                    groups
+                }
+                t => {
+                    log::error!("Unexpected group list format: {t:?}");
+                    return None;
                 }
             }
+        }
 
-            Err(e) => {
-                log::error!("{e:?}");
-                vec![]
-            }
-        };
+        Err(e) => {
+            log::error!("{e:?}");
+            return None;
+        }
+    };
 
-        output.insert(uuid.clone(), groups);
+    if groups.is_empty() {
+        None
+    } else {
+        Some(groups)
     }
-
-    output
 }
 
-pub async fn scrape_timetable(group_uuid: Uuid) -> anyhow::Result<HashMap<Day, Vec<Event>>> {
+pub async fn scrape_timetable(group_uuid: &Uuid) -> Option<HashMap<Day, Vec<Event>>> {
+    log::info!("Scraping timetable for group: {group_uuid:?}");
     let response = reqwest::get(format!(
         "https://www.rudn.ru/api/v1/education/schedule?group={group_uuid}"
     ))
-    .await?
+    .await
+    .ok()?
     .text()
-    .await?;
+    .await
+    .ok()?;
 
     let document = Html::parse_document(&response);
 
@@ -100,14 +105,10 @@ pub async fn scrape_timetable(group_uuid: Uuid) -> anyhow::Result<HashMap<Day, V
         let curr_week_number = chrono::Local::now().iso_week().week();
         let current_week_tabpanel_selector =
             Selector::parse(&format!("#tab__level-{curr_week_number}")).unwrap();
-        let current_week_tabpanel = document
-            .select(&current_week_tabpanel_selector)
-            .next()
-            .ok_or(anyhow::anyhow!("No week tabpanel"))?;
+        let current_week_tabpanel = document.select(&current_week_tabpanel_selector).next()?;
         current_week_tabpanel
             .select(&Selector::parse("table").unwrap())
-            .next()
-            .ok_or(anyhow::anyhow!("No week table"))?
+            .next()?
     };
 
     let mut day = Day::Monday;
@@ -155,5 +156,9 @@ pub async fn scrape_timetable(group_uuid: Uuid) -> anyhow::Result<HashMap<Day, V
             map
         });
 
-    Ok(classes)
+    if classes.is_empty() {
+        None
+    } else {
+        Some(classes)
+    }
 }
