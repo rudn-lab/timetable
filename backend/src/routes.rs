@@ -91,8 +91,7 @@ pub async fn get_groups(req: HttpRequest, db: web::Data<Arc<Mutex<Database>>>) -
                         .body(serde_json::to_string(&scraped_groups).unwrap_or_default()),
                     Err(_) => {
                         // Something is wrong with faculties table
-                        // Update it and
-
+                        // Update it.
                         // Trigger faculties db update on itself
                         let _ = reqwest::get(format!(
                             "{}:{}/faculties",
@@ -118,22 +117,47 @@ pub async fn get_groups(req: HttpRequest, db: web::Data<Arc<Mutex<Database>>>) -
 
 #[derive(Debug, Deserialize)]
 struct TimetableParams {
-    faculty: Uuid,
     group: Uuid,
 }
 
+/// This route returns current week timetable for specified group
+/// Accepts a query string with `group` as parameter;
+///
+/// # Implementation
+/// 1. If we have the data already, just return it
+/// 2. If it is missing, scrape, update db and return
+/// 3. If there's an error with the db (faculty or group is not there) scrape them by triggering
+///    `/groups` enpoint, update the db and return data
 #[get("/timetable")]
 pub async fn get_timetable(
     req: HttpRequest,
-    _db: web::Data<Arc<Mutex<Database>>>,
+    db: web::Data<Arc<Mutex<Database>>>,
 ) -> impl Responder {
     match serde_qs::from_str::<TimetableParams>(req.query_string()) {
-        Ok(params) => match scraping::scrape_timetable(params.faculty, params.group).await {
-            Ok(classes) => {
-                HttpResponse::Ok().body(serde_json::to_string(&classes).unwrap_or_default())
+        Ok(params) => {
+            let timetable = {
+                let mut db = db.lock().unwrap();
+                db.get_timetable(&params.group)
+            };
+
+            if !timetable.is_empty() {
+                HttpResponse::Ok().body(serde_json::to_string(&timetable).unwrap_or_default())
+            } else {
+                // Scraping new
+                match scraping::scrape_timetable(params.group).await {
+                    Ok(scraped_timetable) => {
+                        let mut db = db.lock().unwrap();
+                        match db.update_timetable(&scraped_timetable) {
+                            Ok(_) => HttpResponse::Ok().body(
+                                serde_json::to_string(&scraped_timetable).unwrap_or_default(),
+                            ),
+                            Err(_) => HttpResponse::NotFound().finish(),
+                        }
+                    }
+                    Err(_) => HttpResponse::NotFound().finish(),
+                }
             }
-            Err(_) => HttpResponse::InternalServerError().finish(),
-        },
+        }
         Err(e) => {
             log::error!("{e:?}");
             HttpResponse::BadRequest().body("Invalid url query")

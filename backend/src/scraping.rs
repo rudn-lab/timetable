@@ -86,12 +86,9 @@ pub async fn scrape_groups(faculties_uuid: &Vec<Uuid>) -> HashMap<Uuid, Vec<Grou
     output
 }
 
-pub async fn scrape_timetable(
-    faculty_uuid: Uuid,
-    group_uuid: Uuid,
-) -> anyhow::Result<HashMap<Day, Vec<Event>>> {
+pub async fn scrape_timetable(group_uuid: Uuid) -> anyhow::Result<HashMap<Day, Vec<Event>>> {
     let response = reqwest::get(format!(
-        "https://www.rudn.ru/api/v1/education/schedule?facultet={faculty_uuid}&group={group_uuid}"
+        "https://www.rudn.ru/api/v1/education/schedule?group={group_uuid}"
     ))
     .await?
     .text()
@@ -150,6 +147,7 @@ pub async fn scrape_timetable(
                                 day,
                                 start_time: time[0],
                                 end_time: time[1],
+                                student_group: group_uuid.clone(),
                             };
 
                             map.entry(day)

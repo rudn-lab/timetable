@@ -21,7 +21,10 @@ macro_rules! update_table {
     ($conn:expr, $table:expr, $aggregate:expr) => {{
         let mut res = Ok(());
         for entry in $aggregate {
-            match diesel::insert_into($table).values(entry).execute($conn) {
+            match diesel::insert_into($table)
+                .values(entry.clone())
+                .execute($conn)
+            {
                 // Todo: find a way to set table name in logs
                 Ok(_) => log::info!("Added new entry '{:?}' into table '{:?}'", entry, $table),
                 Err(DatabaseError(DatabaseErrorKind::UniqueViolation, _)) => {
@@ -100,9 +103,46 @@ impl Database {
                 })
             }
             Err(e) => {
-                log::error!("{e:?}");
+                log::error!("Empty faculty data for group query {e:?}");
                 HashMap::new()
             }
         }
+    }
+
+    pub fn get_timetable(&mut self, group: &Uuid) -> HashMap<Day, Vec<Event>> {
+        use schema::timetables::dsl::*;
+        match timetables
+            .filter(student_group.eq(group))
+            .load_iter::<Event, DefaultLoadingMode>(&mut self.conn)
+        {
+            Ok(query_res) => {
+                query_res.fold(HashMap::new(), |mut map: HashMap<Day, Vec<Event>>, el| {
+                    let el = el.unwrap();
+                    map.entry(el.day)
+                        .and_modify(|events| events.push(el.clone()))
+                        .or_insert_with(|| vec![el]);
+                    map
+                })
+            }
+            Err(_) => {
+                log::warn!("Empty timetable for group {group}");
+                HashMap::new()
+            }
+        }
+    }
+
+    pub fn update_timetable(
+        &mut self,
+        timetable: &HashMap<Day, Vec<Event>>,
+    ) -> Result<(), DBError> {
+        update_table!(
+            &mut self.conn,
+            schema::timetables::table,
+            timetable
+                .iter()
+                .flat_map(|(_, v)| v.clone())
+                .map(InsertableEvent::from)
+                .collect::<Vec<_>>()
+        )
     }
 }

@@ -9,7 +9,8 @@ anyhow = "1.0.70"
 chrono = { version = "0.4.24", features = ["serde"] }
 clap = { version = "4.1.13", features = ["derive"] }
 delay_timer = "0.11.4"
-diesel = { version = "2.0.3", features = ["sqlite"] }
+diesel = { version = "2.0.3", features = ["sqlite", "chrono"] }
+diesel-enum = "0.1.0"
 dotenvy = "0.15.7"
 env_logger = "0.10.0"
 json = "0.12.4"

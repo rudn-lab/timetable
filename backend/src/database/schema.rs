@@ -15,9 +15,18 @@ diesel::table! {
     }
 }
 
-diesel::joinable!(groups -> faculties (faculty));
+diesel::table! {
+    timetables (id) {
+        id -> Integer,
+        name -> Text,
+        day -> Text,
+        start_time -> Text,
+        end_time -> Text,
+        student_group -> Text,
+    }
+}
 
-diesel::allow_tables_to_appear_in_same_query!(
-    faculties,
-    groups,
-);
+diesel::joinable!(groups -> faculties (faculty));
+diesel::joinable!(timetables -> groups (student_group));
+
+diesel::allow_tables_to_appear_in_same_query!(faculties, groups, timetables,);

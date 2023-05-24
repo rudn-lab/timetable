@@ -1,6 +1,6 @@
 use crate::database::schema::*;
 use chrono::NaiveTime;
-use diesel::prelude::*;
+use diesel::{prelude::*, sql_types::Text, AsExpression, FromSqlRow};
 use serde::{Deserialize, Serialize};
 
 pub type Uuid = String;
@@ -20,7 +20,10 @@ pub struct Group {
     pub faculty: Uuid,
 }
 
-#[derive(Eq, PartialEq, Hash, Clone, Copy, Debug, Serialize, Deserialize)]
+#[derive(
+    Eq, PartialEq, Hash, Clone, Copy, Debug, Serialize, Deserialize, AsExpression, FromSqlRow,
+)]
+#[diesel(sql_type = Text)]
 pub enum Day {
     Monday,
     Tuesday,
@@ -57,4 +60,41 @@ pub struct Event {
     pub day: Day,
     pub start_time: NaiveTime,
     pub end_time: NaiveTime,
+    pub student_group: Uuid,
+}
+
+#[derive(Insertable, Clone, Debug, Serialize, Deserialize)]
+#[diesel(table_name = timetables)]
+pub struct InsertableEvent {
+    pub name: String,
+    pub day: String,
+    pub start_time: String,
+    pub end_time: String,
+    pub student_group: Uuid,
+}
+
+impl From<Event> for InsertableEvent {
+    fn from(value: Event) -> Self {
+        Self {
+            name: value.name,
+            day: serde_json::to_string(&value.day).unwrap(),
+            start_time: value.start_time.format("%H:%M").to_string(),
+            end_time: value.end_time.format("%H:%M").to_string(),
+            student_group: value.student_group,
+        }
+    }
+}
+
+impl Queryable<timetables::SqlType, diesel::sqlite::Sqlite> for Event {
+    type Row = (i32, String, String, String, String, String);
+
+    fn build(row: Self::Row) -> diesel::deserialize::Result<Self> {
+        Ok(Self {
+            name: row.1,
+            day: serde_json::from_str(&row.2).unwrap(),
+            start_time: NaiveTime::parse_from_str(&row.3, "%H:%M").unwrap(),
+            end_time: NaiveTime::parse_from_str(&row.4, "%H:%M").unwrap(),
+            student_group: row.5,
+        })
+    }
 }
