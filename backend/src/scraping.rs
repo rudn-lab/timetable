@@ -111,49 +111,44 @@ pub async fn scrape_timetable(group_uuid: Uuid) -> anyhow::Result<HashMap<Day, V
     };
 
     let mut day = Day::Monday;
-    let mut skip_to_next_day = false;
+    let mut time: Vec<NaiveTime> = vec![];
 
     let classes = current_week_table
         .select(&Selector::parse("tr").unwrap())
         .fold(HashMap::new(), |mut map: HashMap<Day, Vec<Event>>, el| {
             match el.select(&Selector::parse("th").unwrap()).next() {
-                Some(el) => match Day::from_russian(&el.inner_html()) {
-                    Ok(d) => {
+                Some(el) => {
+                    if let Ok(d) = Day::from_russian(&el.inner_html()) {
                         day = d;
-                        skip_to_next_day = false;
                     }
-                    Err(_) => {
-                        skip_to_next_day = true;
-                    }
-                },
+                }
                 None => {
-                    if !skip_to_next_day {
-                        let time_el = el
-                            .select(&Selector::parse(r#".edss__table-time"#).unwrap())
-                            .next();
-                        let name_el = el
-                            .select(&Selector::parse(r#".edss__table-subj"#).unwrap())
-                            .next();
+                    if let Some(time_el) = el
+                        .select(&Selector::parse(r#".edss__table-time"#).unwrap())
+                        .next()
+                    {
+                        time = time_el
+                            .inner_html()
+                            .split(" - ")
+                            .map(|el| NaiveTime::parse_from_str(el, "%H:%M").unwrap())
+                            .collect::<Vec<_>>();
+                    }
 
-                        if let (Some(time_el), Some(name_el)) = (time_el, name_el) {
-                            let time = time_el
-                                .inner_html()
-                                .split(" - ")
-                                .map(|el| NaiveTime::parse_from_str(el, "%H:%M").unwrap())
-                                .collect::<Vec<_>>();
+                    if let Some(name_el) = el
+                        .select(&Selector::parse(r#".edss__table-subj"#).unwrap())
+                        .next()
+                    {
+                        let event = Event {
+                            name: name_el.inner_html(),
+                            day,
+                            start_time: time[0],
+                            end_time: time[1],
+                            student_group: group_uuid.clone(),
+                        };
 
-                            let event = Event {
-                                name: name_el.inner_html(),
-                                day,
-                                start_time: time[0],
-                                end_time: time[1],
-                                student_group: group_uuid.clone(),
-                            };
-
-                            map.entry(day)
-                                .and_modify(|events| events.push(event.clone()))
-                                .or_insert_with(|| vec![event]);
-                        }
+                        map.entry(day)
+                            .and_modify(|events| events.push(event.clone()))
+                            .or_insert_with(|| vec![event]);
                     }
                 }
             }
