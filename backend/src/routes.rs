@@ -1,6 +1,10 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use actix_web::{get, web, HttpResponse, Responder};
+use serde::Serialize;
 
 use crate::{
     database::{models::Uuid, *},
@@ -32,13 +36,17 @@ pub async fn get_faculties(db: web::Data<Arc<Mutex<Database>>>) -> impl Responde
                     HttpResponse::Ok().body(serde_json::to_string(&faculties).unwrap_or_default())
                 }
                 None => {
-                    log::warn!("Could not find any faculties data");
-                    HttpResponse::NonAuthoritativeInformation()
-                        .insert_header((
-                            "Warning",
-                            "110 timetable-backend \"Could not ask RUDN web page\"",
-                        ))
-                        .finish()
+                    let msg = "Could not scrape faculties data from RUDN schedule web-page";
+                    log::warn!("{msg}");
+
+                    #[derive(Serialize)]
+                    struct Response<'a> {
+                        reason: &'a str,
+                    }
+
+                    let body = Response { reason: msg };
+
+                    HttpResponse::NotFound().json(serde_json::to_string(&body).unwrap())
                 }
             }
         }
@@ -75,14 +83,21 @@ pub async fn get_groups(
         }
     }
 
-    let body = r#"
-    {
-        "reason": "Could not scrape group data for this faculty",
-        "_links": {
-            "faculties": "/faculties",
-        }
-    }"#;
-    HttpResponse::NotFound().json(serde_json::from_str::<serde_json::Value>(body).unwrap())
+    let msg = format!("Could not scrape group data for this faculty: {faculty_uuid}");
+    log::warn!("{msg}");
+
+    #[derive(Serialize)]
+    struct Response<'a> {
+        reason: &'a str,
+        links: HashMap<&'static str, &'static str>,
+    }
+
+    let body = Response {
+        reason: &msg,
+        links: HashMap::from([("faculties", "/faculties")]),
+    };
+
+    HttpResponse::NotFound().json(serde_json::to_string(&body).unwrap())
 }
 
 /// This route returns current week timetable for specified group
@@ -116,14 +131,22 @@ pub async fn get_timetable(
         }
     }
 
-    let body = r#"
-    {
-        "reason": "Could not scrape timetable data for this group",
-        "_links": {
-            "faculties": "/faculties",
-            "groups": "/groups/{faculty_uuid}"
-        }
-    }"#;
+    let msg = format!("Could not scrape timetable data for this group: {group_uuid}");
+    log::warn!("{msg}");
 
-    HttpResponse::NotFound().json(serde_json::from_str::<serde_json::Value>(body).unwrap())
+    #[derive(Serialize)]
+    struct Response<'a> {
+        reason: &'a str,
+        links: HashMap<&'static str, &'static str>,
+    }
+
+    let body = Response {
+        reason: &msg,
+        links: HashMap::from([
+            ("faculties", "/faculties"),
+            ("groups", "/groups/{faculty_uuid}"),
+        ]),
+    };
+
+    HttpResponse::NotFound().json(serde_json::to_string(&body).unwrap())
 }

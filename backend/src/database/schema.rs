@@ -29,4 +29,8 @@ diesel::table! {
 diesel::joinable!(groups -> faculties (faculty));
 diesel::joinable!(timetables -> groups (student_group));
 
-diesel::allow_tables_to_appear_in_same_query!(faculties, groups, timetables,);
+diesel::allow_tables_to_appear_in_same_query!(
+    faculties,
+    groups,
+    timetables,
+);
