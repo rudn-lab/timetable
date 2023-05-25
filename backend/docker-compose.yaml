@@ -1,13 +1,11 @@
 services:
   backend:
     build: .
+    env_file:
+      - .env
     ports:
       - "80:80"
     restart: unless-stopped
     volumes:
-      - .:/app
-      - registry:/root/.cargo/registry
-
-volumes:
-  registry:
-    driver: local
+      - ./timetables.db:/app/timetables.json
+      - ./backend.log:/app/backend.log
