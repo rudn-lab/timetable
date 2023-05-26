@@ -37,7 +37,8 @@ async fn run_server(
                 routes::get_timetable
             ])
     })
-    .bind((ip, port))?
+    .bind((ip, port))
+    .unwrap_or_else(|_| panic!("{ip}:{port} is already bound"))
     .run()
     .await
 }

@@ -21,33 +21,30 @@ pub async fn get_faculties(db: web::Data<Arc<Mutex<Database>>>) -> impl Responde
         db.get_faculties()
     };
 
-    match faculties {
-        Some(faculties) => {
-            log::debug!("Returning faculties data from the database");
-            HttpResponse::Ok().body(serde_json::to_string(&faculties).unwrap_or_default())
-        }
-        None => {
-            // If the database is empty, scrape the data
-            match scraping::scrape_faculties().await {
-                Some(faculties) => {
-                    log::debug!("Scraping new faculties data");
-                    let mut db = db.lock().unwrap();
-                    db.update_faculties(&faculties);
-                    HttpResponse::Ok().body(serde_json::to_string(&faculties).unwrap_or_default())
+    if !faculties.is_empty() {
+        log::debug!("Returning faculties data from the database");
+        HttpResponse::Ok().body(serde_json::to_string(&faculties).unwrap_or_default())
+    } else {
+        // If the database is empty, scrape the data
+        match scraping::scrape_faculties().await {
+            Some(faculties) => {
+                log::debug!("Scraping new faculties data");
+                let mut db = db.lock().unwrap();
+                db.update_faculties(&faculties);
+                HttpResponse::Ok().body(serde_json::to_string(&faculties).unwrap_or_default())
+            }
+            None => {
+                let msg = "Could not scrape faculties data from RUDN schedule web-page";
+                log::warn!("{msg}");
+
+                #[derive(Serialize)]
+                struct Response<'a> {
+                    reason: &'a str,
                 }
-                None => {
-                    let msg = "Could not scrape faculties data from RUDN schedule web-page";
-                    log::warn!("{msg}");
 
-                    #[derive(Serialize)]
-                    struct Response<'a> {
-                        reason: &'a str,
-                    }
+                let body = Response { reason: msg };
 
-                    let body = Response { reason: msg };
-
-                    HttpResponse::NotFound().json(serde_json::to_string(&body).unwrap())
-                }
+                HttpResponse::NotFound().json(serde_json::to_string(&body).unwrap())
             }
         }
     }

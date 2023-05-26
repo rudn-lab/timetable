@@ -78,9 +78,9 @@ impl Database {
 
     /// Returns all current faculties of the RUDN university
     /// If the vector is empty, something is wrong with the database
-    pub fn get_faculties(&mut self) -> Option<Vec<Faculty>> {
+    pub fn get_faculties(&mut self) -> Vec<Faculty> {
         use schema::faculties::dsl::*;
-        faculties.load::<Faculty>(&mut self.conn).ok()
+        faculties.load::<Faculty>(&mut self.conn).unwrap_or(vec![])
     }
 
     pub fn update_groups(&mut self, new_groups: &Vec<Group>) -> Result<(), DBError> {
