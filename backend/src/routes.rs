@@ -23,7 +23,7 @@ pub async fn get_faculties(db: web::Data<Arc<Mutex<Database>>>) -> impl Responde
 
     if !faculties.is_empty() {
         log::debug!("Returning faculties data from the database");
-        HttpResponse::Ok().body(serde_json::to_string(&faculties).unwrap_or_default())
+        HttpResponse::Ok().json(faculties)
     } else {
         // If the database is empty, scrape the data
         match scraping::scrape_faculties().await {
@@ -31,10 +31,10 @@ pub async fn get_faculties(db: web::Data<Arc<Mutex<Database>>>) -> impl Responde
                 log::debug!("Scraping new faculties data");
                 let mut db = db.lock().unwrap();
                 db.update_faculties(&faculties);
-                HttpResponse::Ok().body(serde_json::to_string(&faculties).unwrap_or_default())
+                HttpResponse::Ok().json(faculties)
             }
             None => {
-                let msg = "Could not scrape faculties data from RUDN schedule web-page";
+                let msg = "Could not scrape faculties data from RUDN schedule webpage";
                 log::warn!("{msg}");
 
                 #[derive(Serialize)]
@@ -44,7 +44,7 @@ pub async fn get_faculties(db: web::Data<Arc<Mutex<Database>>>) -> impl Responde
 
                 let body = Response { reason: msg };
 
-                HttpResponse::NotFound().json(serde_json::to_string(&body).unwrap())
+                HttpResponse::NotFound().json(body)
             }
         }
     }
@@ -63,7 +63,7 @@ pub async fn get_groups(
     };
     if !groups.is_empty() {
         log::debug!("Returning groups data from the database");
-        return HttpResponse::Ok().body(serde_json::to_string(&groups).unwrap_or_default());
+        return HttpResponse::Ok().json(groups);
     } else {
         // We do not have group data in DB, scrape anew
         if let Some(scraped_groups) = scraping::scrape_group(&faculty_uuid).await {
@@ -74,8 +74,7 @@ pub async fn get_groups(
             };
             if update_groups_db().is_some() {
                 log::debug!("Returning scraped groups data");
-                return HttpResponse::Ok()
-                    .body(serde_json::to_string(&scraped_groups).unwrap_or_default());
+                return HttpResponse::Ok().json(scraped_groups);
             }
         }
     }
@@ -94,7 +93,7 @@ pub async fn get_groups(
         links: HashMap::from([("faculties", "/faculties")]),
     };
 
-    HttpResponse::NotFound().json(serde_json::to_string(&body).unwrap())
+    HttpResponse::NotFound().json(body)
 }
 
 /// This route returns current week timetable for specified group
@@ -111,7 +110,7 @@ pub async fn get_timetable(
 
     if !timetable.is_empty() {
         log::debug!("Returning timetable data from the database");
-        return HttpResponse::Ok().body(serde_json::to_string(&timetable).unwrap_or_default());
+        return HttpResponse::Ok().json(timetable);
     } else {
         // Scraping new
         if let Some(scraped_timetable) = scraping::scrape_timetable(&group_uuid).await {
@@ -122,8 +121,7 @@ pub async fn get_timetable(
 
             if update_timetable_db().is_some() {
                 log::debug!("Returning scraped timetable data");
-                return HttpResponse::Ok()
-                    .body(serde_json::to_string(&scraped_timetable).unwrap_or_default());
+                return HttpResponse::Ok().json(scraped_timetable);
             }
         }
     }
@@ -145,5 +143,5 @@ pub async fn get_timetable(
         ]),
     };
 
-    HttpResponse::NotFound().json(serde_json::to_string(&body).unwrap())
+    HttpResponse::NotFound().json(body)
 }
