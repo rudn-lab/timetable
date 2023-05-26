@@ -7,5 +7,5 @@ services:
       - "80:80"
     restart: unless-stopped
     volumes:
-      - ./timetables.db:/app/timetables.json
+      - ./timetables.db:/app/timetables.db
       - ./backend.log:/app/backend.log

@@ -54,7 +54,7 @@ pub async fn get_faculties(db: web::Data<Arc<Mutex<Database>>>) -> impl Responde
 }
 
 /// This route returns all student groups for given faculty
-#[get("/groups/{faculty_uuid}")]
+#[get("/{faculty_uuid}/groups")]
 pub async fn get_groups(
     faculty_uuid: web::Path<Uuid>,
     db: web::Data<Arc<Mutex<Database>>>,
@@ -102,7 +102,7 @@ pub async fn get_groups(
 
 /// This route returns current week timetable for specified group
 /// Accepts a query string with `group` as parameter;
-#[get("/timetable/{group_uuid}")]
+#[get("/{group_uuid}/timetable")]
 pub async fn get_timetable(
     group_uuid: web::Path<Uuid>,
     db: web::Data<Arc<Mutex<Database>>>,
@@ -144,7 +144,7 @@ pub async fn get_timetable(
         reason: &msg,
         links: HashMap::from([
             ("faculties", "/faculties"),
-            ("groups", "/groups/{faculty_uuid}"),
+            ("groups", "/{faculty_uuid}/groups"),
         ]),
     };
 
