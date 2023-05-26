@@ -14,6 +14,7 @@ pub async fn scrape_faculties() -> Option<Vec<Faculty>> {
         .ok()?;
 
     let document = Html::parse_document(&response);
+    log::debug!("Got the webpage");
 
     // Select 'select' element for faculties
     let faculty_select_element_selector = Selector::parse(r#"select[name="facultet"]"#).ok()?;
@@ -33,6 +34,8 @@ pub async fn scrape_faculties() -> Option<Vec<Faculty>> {
         })
         .collect();
 
+    log::debug!("Successfully retreived data from the timetable webpage");
+
     Some(faculties)
 }
 
@@ -50,6 +53,8 @@ pub async fn scrape_group(faculty_uuid: &Uuid) -> Option<Vec<Group>> {
         .await
     {
         Ok(resp) => {
+            log::debug!("Got json response from RUDN API");
+
             let parsed = json::parse(&resp.text().await.unwrap())
                 .map_err(|e| log::error!("Error while parsing json response: {e:?}"))
                 .ok()?;
@@ -81,6 +86,8 @@ pub async fn scrape_group(faculty_uuid: &Uuid) -> Option<Vec<Group>> {
         }
     };
 
+    log::debug!("Successfully retreived data from RUDN API");
+
     if groups.is_empty() {
         None
     } else {
@@ -100,6 +107,7 @@ pub async fn scrape_timetable(group_uuid: &Uuid) -> Option<HashMap<Day, Vec<Even
     .ok()?;
 
     let document = Html::parse_document(&response);
+    log::debug!("Got the webpage part");
 
     let current_week_table = {
         let curr_week_number = chrono::Local::now().iso_week().week();
@@ -155,6 +163,8 @@ pub async fn scrape_timetable(group_uuid: &Uuid) -> Option<HashMap<Day, Vec<Even
             }
             map
         });
+
+    log::debug!("Successfully parsed data from the timetable webpage");
 
     if classes.is_empty() {
         None
