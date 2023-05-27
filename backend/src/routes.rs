@@ -14,6 +14,11 @@ use crate::{
     scraping,
 };
 
+#[get("/")]
+pub async fn get_index() -> impl Responder {
+    HttpResponse::Ok().json(HashMap::from([("links", "/faculties")]))
+}
+
 /// This route returns all faculties of the RUDN University from the database,
 /// if there is no faculties stored it scrapes info from the web and returns that.
 /// However, if at least one faculty is left in the database this function will not scrape the rest

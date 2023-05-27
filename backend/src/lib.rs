@@ -32,6 +32,7 @@ async fn run_server(
             // https://docs.rs/actix-web/latest/actix_web/middleware/struct.Logger.html#format
             .wrap(Logger::default())
             .service(services![
+                routes::get_index,
                 routes::get_faculties,
                 routes::get_groups,
                 routes::get_timetable
