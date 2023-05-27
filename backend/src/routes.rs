@@ -7,7 +7,10 @@ use actix_web::{get, web, HttpResponse, Responder};
 use serde::Serialize;
 
 use crate::{
-    database::{models::Uuid, *},
+    database::{
+        models::{Faculty, Uuid},
+        *,
+    },
     scraping,
 };
 
@@ -19,35 +22,47 @@ pub async fn get_faculties(db: web::Data<Arc<Mutex<Database>>>) -> impl Responde
     let faculties = {
         let mut db = db.lock().unwrap();
         db.get_faculties()
-    };
+    }; // drop MutexGuard
 
-    if !faculties.is_empty() {
-        log::debug!("Returning faculties data from the database");
-        HttpResponse::Ok().json(faculties)
-    } else {
-        // If the database is empty, scrape the data
-        match scraping::scrape_faculties().await {
-            Some(faculties) => {
-                log::debug!("Scraping new faculties data");
-                let mut db = db.lock().unwrap();
-                db.update_faculties(&faculties);
-                HttpResponse::Ok().json(faculties)
-            }
-            None => {
-                let msg = "Could not scrape faculties data from RUDN schedule webpage";
-                log::warn!("{msg}");
+    #[derive(Serialize)]
+    struct PositiveResponse<'a> {
+        faculties: Vec<Faculty>,
+        links: HashMap<&'a str, &'a str>,
+    }
 
-                #[derive(Serialize)]
-                struct Response<'a> {
-                    reason: &'a str,
-                }
-
-                let body = Response { reason: msg };
-
-                HttpResponse::NotFound().json(body)
+    impl<'a> PositiveResponse<'a> {
+        fn new(faculties: Vec<Faculty>) -> Self {
+            Self {
+                faculties,
+                links: HashMap::from([("groups", "/{faculty_uuid}/groups")]),
             }
         }
     }
+
+    if let Ok(faculties) = faculties {
+        if !faculties.is_empty() {
+            log::debug!("Returning faculties data from the database");
+            return HttpResponse::Ok().json(PositiveResponse::new(faculties));
+        }
+    }
+    // If the database is empty, scrape the data
+    if let Some(faculties) = scraping::scrape_faculties().await {
+        let mut db = db.lock().unwrap();
+        if db.update_faculties(&faculties).is_ok() {
+            log::debug!("Returning scraped faculties data");
+            return HttpResponse::Ok().json(PositiveResponse::new(faculties));
+        }
+    }
+
+    let msg = "Could not scrape faculties data from RUDN schedule webpage";
+    log::warn!("{msg}");
+
+    #[derive(Serialize)]
+    struct NegativeResponse<'a> {
+        reason: &'a str,
+    }
+
+    HttpResponse::NotFound().json(NegativeResponse { reason: msg })
 }
 
 /// This route returns all student groups for given faculty
@@ -56,26 +71,23 @@ pub async fn get_groups(
     faculty_uuid: web::Path<Uuid>,
     db: web::Data<Arc<Mutex<Database>>>,
 ) -> impl Responder {
-    // Get groups from DB
     let groups = {
         let mut db = db.lock().unwrap();
-        db.get_groups_by_faculty(&faculty_uuid)
+        db.get_groups_for_faculty(&faculty_uuid)
     };
-    if !groups.is_empty() {
-        log::debug!("Returning groups data from the database");
-        return HttpResponse::Ok().json(groups);
-    } else {
-        // We do not have group data in DB, scrape anew
-        if let Some(scraped_groups) = scraping::scrape_group(&faculty_uuid).await {
-            // Make into a closure, to later reuse
-            let update_groups_db = || {
-                let mut db = db.lock().unwrap();
-                db.update_groups(&scraped_groups).ok()
-            };
-            if update_groups_db().is_some() {
-                log::debug!("Returning scraped groups data");
-                return HttpResponse::Ok().json(scraped_groups);
-            }
+
+    if let Ok(groups) = groups {
+        if !groups.is_empty() {
+            log::debug!("Returning groups data from the database");
+            return HttpResponse::Ok().json(groups);
+        }
+    }
+    // We do not have group data in DB, scrape anew
+    if let Some(scraped_groups) = scraping::scrape_group(&faculty_uuid).await {
+        let mut db = db.lock().unwrap();
+        if db.update_groups(&scraped_groups).is_ok() {
+            log::debug!("Returning scraped groups data");
+            return HttpResponse::Ok().json(scraped_groups);
         }
     }
 
@@ -83,17 +95,15 @@ pub async fn get_groups(
     log::warn!("{msg}");
 
     #[derive(Serialize)]
-    struct Response<'a> {
+    struct NegativeResponse<'a> {
         reason: &'a str,
-        links: HashMap<&'static str, &'static str>,
+        links: HashMap<&'a str, &'a str>,
     }
 
-    let body = Response {
+    HttpResponse::NotFound().json(NegativeResponse {
         reason: &msg,
         links: HashMap::from([("faculties", "/faculties")]),
-    };
-
-    HttpResponse::NotFound().json(body)
+    })
 }
 
 /// This route returns current week timetable for specified group
@@ -105,24 +115,21 @@ pub async fn get_timetable(
 ) -> impl Responder {
     let timetable = {
         let mut db = db.lock().unwrap();
-        db.get_timetable(&group_uuid)
+        db.get_timetable_for_group(&group_uuid)
     };
 
-    if !timetable.is_empty() {
-        log::debug!("Returning timetable data from the database");
-        return HttpResponse::Ok().json(timetable);
-    } else {
-        // Scraping new
-        if let Some(scraped_timetable) = scraping::scrape_timetable(&group_uuid).await {
-            let update_timetable_db = || {
-                let mut db = db.lock().unwrap();
-                db.update_timetable(&scraped_timetable).ok()
-            };
+    if let Ok(timetable) = timetable {
+        if !timetable.is_empty() {
+            log::debug!("Returning timetable data from the database");
+            return HttpResponse::Ok().json(timetable);
+        }
+    }
 
-            if update_timetable_db().is_some() {
-                log::debug!("Returning scraped timetable data");
-                return HttpResponse::Ok().json(scraped_timetable);
-            }
+    if let Some(scraped_timetable) = scraping::scrape_timetable(&group_uuid).await {
+        let mut db = db.lock().unwrap();
+        if db.update_timetable(&scraped_timetable).is_ok() {
+            log::debug!("Returning scraped timetable data");
+            return HttpResponse::Ok().json(scraped_timetable);
         }
     }
 
