@@ -14,7 +14,7 @@ COPY . .
 RUN cargo build --release --bin backend
 
 FROM debian:bullseye-slim AS runtime
-RUN apt-get update && apt install -y sqlite3
+RUN apt-get update && apt install -y sqlite3 ca-certificates
 WORKDIR /app
 COPY --from=builder /app/target/release/backend /usr/local/bin
 ENTRYPOINT ["/usr/local/bin/backend", "--address", "public", "--port", "80"]
