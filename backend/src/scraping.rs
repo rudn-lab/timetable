@@ -8,9 +8,17 @@ pub async fn scrape_faculties() -> Option<Vec<Faculty>> {
     log::info!("Scraping faculties");
     let response = reqwest::get("https://www.rudn.ru/education/schedule")
         .await
+        .map_err(|e| {
+            log::error!("{e:?}");
+            e
+        })
         .ok()?
         .text()
         .await
+        .map_err(|e| {
+            log::error!("{e:?}");
+            e
+        })
         .ok()?;
 
     let document = Html::parse_document(&response);
@@ -101,9 +109,17 @@ pub async fn scrape_timetable(group_uuid: &Uuid) -> Option<HashMap<Day, Vec<Even
         "https://www.rudn.ru/api/v1/education/schedule?group={group_uuid}"
     ))
     .await
+    .map_err(|e| {
+        log::error!("{e:?}");
+        e
+    })
     .ok()?
     .text()
     .await
+    .map_err(|e| {
+        log::error!("{e:?}");
+        e
+    })
     .ok()?;
 
     let document = Html::parse_document(&response);
